@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -10,6 +9,8 @@ import { loginSchema, TLoginSchema } from "@/lib/validators";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { motion } from "motion/react"
+import { User } from "@/mock/user";
+
 
 export default function LoginForm() {
   const router = useRouter();
@@ -26,14 +27,12 @@ export default function LoginForm() {
 
   const onSubmit = async (data: TLoginSchema) => {
     setLoginError(null);
-    const result = await signIn("credentials", {
-      username: data.username,
-      password: data.password,
-      redirect: false,
-    });
-    if (result?.error) {
+    const result = User.find(
+      (u) => u.username === data.username && u.password === data.password
+    )
+    if (!result) {
       setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-    } else if (result?.ok) {
+    } else if (result) {
       router.push("/dashboard");
     }
   };
