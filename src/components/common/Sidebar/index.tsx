@@ -5,13 +5,18 @@ import Image from "next/image";
 import {
     FiLogOut,
     FiChevronLeft,
+    FiChevronDown,
 } from "react-icons/fi";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
+import { useRouter } from "next/navigation";
+
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [theme, setTheme] = useState("light");
+    const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
+    const router = useRouter()
 
     useEffect(() => {
         const savedTheme = localStorage.getItem("theme") || "light";
@@ -30,6 +35,10 @@ export default function Sidebar() {
     const handleThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newTheme = e.target.checked ? "dark" : "light";
         setTheme(newTheme);
+    };
+
+    const handleLogout = () => {
+        router.push('/login');
     };
 
     return (
@@ -66,10 +75,36 @@ export default function Sidebar() {
                         <TbReportSearch size={20} className="flex-shrink-0" />
                         {!isCollapsed && <span className="ml-3">Reports</span>}
                     </a>
-                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
-                        <GoHome size={20} className="flex-shrink-0" />
-                        {!isCollapsed && <span className="ml-3">Warhouse</span>}
-                    </a>
+                    <div>
+                        <button
+                            onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
+                            className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200"
+                        >
+                            <div className="flex items-center">
+                                <GoHome size={20} className="flex-shrink-0" />
+                                {!isCollapsed && <span className="ml-3">Warehouse</span>}
+                            </div>
+                            {!isCollapsed && (
+                                <FiChevronDown
+                                    className={`transition-transform duration-200 ${isWarehouseOpen ? "rotate-180" : ""
+                                        }`}
+                                />
+                            )}
+                        </button>
+                        {isWarehouseOpen && !isCollapsed && (
+                            <div className="pl-8 pt-2 space-y-2">
+                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
+                                    Warehouse 1
+                                </a>
+                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
+                                    Warehouse 2
+                                </a>
+                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
+                                    Warehouse 3
+                                </a>
+                            </div>
+                        )}
+                    </div>
                 </nav>
 
                 <div className="px-4 py-6 border-t border-base-300 space-y-2">
@@ -104,10 +139,12 @@ export default function Sidebar() {
                             </button>
                         )}
                     </div>
-                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
+
+                    <button onClick={handleLogout} className="flex items-center w-full p-2 rounded-lg hover:bg-base-200">
                         <FiLogOut size={20} className="flex-shrink-0" />
                         {!isCollapsed && <span className="ml-3">Logout</span>}
-                    </a>
+                    </button>
+
                 </div>
             </div>
         </aside>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +25,7 @@ export default function LoginForm() {
   });
 
   const onSubmit = async (data: TLoginSchema) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setLoginError(null);
     const result = User.find(
       (u) => u.username === data.username && u.password === data.password
@@ -56,7 +56,9 @@ export default function LoginForm() {
             placeholder="Username or EmployeeId"
           />
           {errors.username && (
-            <p className="text-red-500 text-sm mt-1">{`${errors.username.message}`}</p>
+            <p className="text-red-500 text-sm mt-1">
+              {`${errors.username.message}`}
+            </p>
           )}
         </div>
 
@@ -85,7 +87,6 @@ export default function LoginForm() {
             <p className="text-red-500 text-sm mt-1">{`${errors.password.message}`}</p>
           )}
         </div>
-
 
         <Button
           type="submit"
