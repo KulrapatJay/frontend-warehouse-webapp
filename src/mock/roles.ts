@@ -1,4 +1,4 @@
-export const role = [
+export const Role = [
     {
         id: 1,
         role_name: 'user'
