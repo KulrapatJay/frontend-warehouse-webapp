@@ -48,7 +48,6 @@ export default function Sidebar() {
                 }`}
         >
             <div className="flex flex-col h-full">
-                {/* ✨ CHANGED: Added a bottom border to perfectly align with the Navbar */}
                 <div
                     className={`flex items-center h-16 p-4 border-b border-base-300 ${
                         isCollapsed ? "justify-center" : "justify-between"
@@ -56,7 +55,7 @@ export default function Sidebar() {
                 >
                     {!isCollapsed && (
                         <Image
-                            src="/assets/images/Bee Choice PNG -02.png" // Make sure this path is correct
+                            src="/assets/images/Bee Choice PNG -02.png" 
                             alt="Company Logo"
                             width={80}
                             height={80}
