@@ -6,6 +6,7 @@ import {
     FiLogOut,
     FiChevronLeft,
     FiChevronDown,
+    FiMenu,
 } from "react-icons/fi";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
@@ -46,24 +47,31 @@ export default function Sidebar() {
             className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
                 }`}
         >
-            <button
-                onClick={toggleSidebar}
-                className="absolute -right-3 top-9 z-10 p-1 bg-primary text-primary-content rounded-full"
-            >
-                <FiChevronLeft
-                    className={`transition-transform duration-300 ${isCollapsed ? "rotate-180" : ""}`}
-                />
-            </button>
-
             <div className="flex flex-col h-full">
-                <div className="flex items-center justify-center p-4 border-b border-base-300">
-                    <Image
-                        src="/assets/images/Bee Choice PNG -02.png"
-                        alt="Company Logo"
-                        width={isCollapsed ? 40 : 80}
-                        height={isCollapsed ? 40 : 80}
-                        className="transition-all duration-300"
-                    />
+                <div
+                    className={`flex items-center h-16 p-4 border-b border-base-300 ${
+                        isCollapsed ? "justify-center" : "justify-between"
+                    }`}
+                >
+                    {!isCollapsed && (
+                        <Image
+                            src="/assets/images/Bee Choice PNG -02.png" 
+                            alt="Company Logo"
+                            width={80}
+                            height={80}
+                            className="transition-all duration-300"
+                        />
+                    )}
+                    <button
+                        onClick={toggleSidebar}
+                        className="btn btn-ghost btn-circle"
+                    >
+                        {isCollapsed ? (
+                            <FiMenu size={22} />
+                        ) : (
+                            <FiChevronLeft size={22} />
+                        )}
+                    </button>
                 </div>
 
                 <nav className="flex-1 px-4 py-6 space-y-2">
