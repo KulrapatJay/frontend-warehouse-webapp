@@ -11,6 +11,7 @@ import {
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
+import { LuCircleUserRound } from "react-icons/lu";
 import { useRouter } from "next/navigation";
 
 export default function Sidebar() {
@@ -113,6 +114,10 @@ export default function Sidebar() {
                             </div>
                         )}
                     </div>
+                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
+                    <LuCircleUserRound  size={20} className="flex-shrink-0" />
+                    {!isCollapsed && <span className="ml-3">User management</span>}
+                    </a>
                 </nav>
 
                 <div className="px-4 py-6 border-t border-base-300 space-y-2">
