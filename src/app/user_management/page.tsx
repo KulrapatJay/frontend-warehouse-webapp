@@ -1,94 +1,115 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "@/components/common/Sidebar";
 import Navbar from "@/components/common/Navbar";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
+import { User as userMock } from "@/mock/user";
+import { Prefix } from "@/mock/prefixs";
 
-const users = [
-  {
-    id: 1111,
-    prefix: "Mr./Ms.",
-    firstName: "John",
-    lastName: "Doe",
-    role: "Admin",
-    username: "Johni",
-    avatar: "/avatar1.jpg",
-  },
-  {
-    id: 1112,
-    prefix: "Mr./Ms.",
-    firstName: "Sarah",
-    lastName: "Miller",
-    role: "Admin",
-    username: "Sarah12",
-    avatar: "/avatar2.jpg",
-  },
-  {
-    id: 1113,
-    prefix: "Mr./Ms.",
-    firstName: "Kevin",
-    lastName: "Smith",
-    role: "Manager",
-    username: "Kevin11",
-    avatar: "/avatar3.jpg",
-  },
-  {
-    id: 1114,
-    prefix: "Mr./Ms.",
-    firstName: "Michael",
-    lastName: "Johnson",
-    role: "Staff",
-    username: "MichaelJR",
-    avatar: "/avatar4.jpg",
-  },
-  {
-    id: 1115,
-    prefix: "Mr./Ms.",
-    firstName: "Patricia",
-    lastName: "Lopez",
-    role: "Manager",
-    username: "Patricia_eiei",
-    avatar: "/avatar5.jpg",
-  },
-  {
-    id: 1116,
-    prefix: "Mr./Ms.",
-    firstName: "George",
-    lastName: "White",
-    role: "Staff",
-    username: "GeorgeW",
-    avatar: "/avatar6.jpg",
-  },
-];
+type User = typeof userMock[number];
+type PrefixItem = { id: number; name: string };
 
 export default function UserManagement() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  // ใช้ธีมของ daisyUI ผ่าน data-theme (ไม่แตะ tailwind.config)
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const syncTheme = () => {
+      // อ่านจาก DOM ก่อน ถ้าไม่มีค่อยดูจาก localStorage
+      const domTheme = root.getAttribute("data-theme") as "light" | "dark" | null;
+      const stored = localStorage.getItem("theme") as "light" | "dark" | null;
+      const next = (domTheme || stored || "light") as "light" | "dark";
+
+      if (root.getAttribute("data-theme") !== next) {
+        root.setAttribute("data-theme", next);
+      }
+      setTheme(next);
+    };
+
+    // เรียกครั้งแรก
+    syncTheme();
+
+    // อัปเดตเมื่อมีการแก้ data-theme บน <html> (เช่น ปุ่มใน Sidebar ไปแก้ให้)
+    const obs = new MutationObserver(syncTheme);
+    obs.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+
+    // อัปเดตเมื่อ tab อื่นเปลี่ยน localStorage (หรือโค้ดที่แก้ localStorage โดยตรง)
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "theme") syncTheme();
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      obs.disconnect();
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  const prefixMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    (Prefix as PrefixItem[]).forEach((p) => (map[p.id] = p.name));
+    return map;
+  }, []);
+  const getPrefix = (id: number) => prefixMap[id] ?? "-";
+
+  const filteredUsers = useMemo(
+    () =>
+      userMock.filter((u: User) =>
+        `${u.first_name} ${u.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [searchTerm]
+  );
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    // ใช้สีพื้นฐานจากธีม (light/dark) ของ daisyUI
+    <div className="flex h-screen bg-base-200 text-base-content">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar />
         <main className="flex-1 p-6 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          {/* การ์ด */}
+          <div className="bg-base-100 rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold">User management</h1>
             </div>
 
             <div className="flex justify-between items-center mb-4">
-              <span className="text-gray-600 text-sm">All users <span className="text-black font-semibold">25</span></span>
+              <span className="text-sm opacity-70">
+                All users <span className="font-semibold opacity-100">{userMock.length}</span>
+              </span>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Search"
-                  className="border rounded px-3 py-1 w-64 shadow-inner"
+                  placeholder="Search by name..."
+                  className="input input-bordered w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <button className="bg-orange-400 hover:bg-orange-500 text-white px-4 py-2 rounded">+ Add user</button>
+                {/* ปุ่ม: ดำใน Light / น้ำเงินใน Dark */}
+                <button
+                  className={`btn text-white ${
+                    theme === "dark"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-black hover:bg-gray-800"
+                  }`}
+                >
+                  + Add user
+                </button>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border rounded-lg overflow-hidden">
-                <thead className="bg-[#f7d9a8] text-left">
-                  <tr>
-                    <th className="p-3"><input type="checkbox" /></th>
+              {/* ตารางขาวใน light / เข้มใน dark ตามธีม */}
+              <table className="table w-full text-sm rounded-lg overflow-hidden bg-base-100">
+                <thead className="bg-base-200">
+                  <tr className="font-semibold">
+                    <th className="p-3">
+                      <input type="checkbox" className="checkbox checkbox-sm" />
+                    </th>
                     <th className="p-3">prefix</th>
                     <th className="p-3">first name</th>
                     <th className="p-3">last name</th>
@@ -98,25 +119,38 @@ export default function UserManagement() {
                     <th className="p-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#fef6ee]">
-                  {users.map((user, index) => (
-                    <tr key={index} className="border-t hover:bg-[#fff7ee]">
-                      <td className="p-3"><input type="checkbox" /></td>
-                      <td className="p-3 flex items-center gap-2">
-                        <img src={user.avatar} alt="avatar" className="w-8 h-8 rounded-full" />
-                        {user.prefix}
+
+                <tbody>
+                  {filteredUsers.map((user, index) => (
+                    <tr
+                      key={user.id ?? index}
+                      className="hover:bg-base-200 border-t border-base-300"
+                    >
+                      <td className="p-3">
+                        <input type="checkbox" className="checkbox checkbox-sm" />
                       </td>
-                      <td className="p-3">{user.firstName}</td>
-                      <td className="p-3">{user.lastName}</td>
+                      <td className="p-3">{getPrefix(user.prefix_id)}</td>
+                      <td className="p-3">{user.first_name}</td>
+                      <td className="p-3">{user.last_name}</td>
                       <td className="p-3">{user.id}</td>
-                      <td className="p-3">{user.role}</td>
+                      <td className="p-3">
+                        {user.role_id === 1
+                          ? "User"
+                          : user.role_id === 2
+                          ? "Manager"
+                          : user.role_id === 3
+                          ? "Admin"
+                          : user.role_id === 4
+                          ? "Staff"
+                          : "-"}
+                      </td>
                       <td className="p-3">{user.username}</td>
                       <td className="p-3 flex gap-2">
-                        <button className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1">
-                          <MdOutlineModeEditOutline className="text-white" /> Edit
+                        <button className="btn btn-success btn-sm gap-1 text-white">
+                          <MdOutlineModeEditOutline /> Edit
                         </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1">
-                          <MdOutlineDelete className="text-white" /> Delete
+                        <button className="btn btn-error btn-sm gap-1 text-white">
+                          <MdOutlineDelete /> Delete
                         </button>
                       </td>
                     </tr>
@@ -124,18 +158,18 @@ export default function UserManagement() {
                 </tbody>
               </table>
             </div>
-
+            {/* Pagination */}
             <div className="flex justify-center mt-6 gap-2 text-sm">
-              <button>{"<"}</button>
+              <button className="btn btn-ghost btn-sm">{"<"}</button>
               {[1, 2, 3, 4].map((n) => (
                 <button
                   key={n}
-                  className={`px-2 py-1 rounded ${n === 1 ? "bg-gray-300" : "hover:bg-gray-200"}`}
+                  className={`btn btn-sm ${n === 1 ? "btn-neutral" : "btn-ghost"}`}
                 >
                   {n}
                 </button>
               ))}
-              <button>{">"}</button>
+              <button className="btn btn-ghost btn-sm">{">"}</button>
             </div>
           </div>
         </main>

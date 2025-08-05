@@ -13,6 +13,8 @@ import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
 import { LuCircleUserRound } from "react-icons/lu";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 
 export default function Sidebar() {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -114,10 +116,10 @@ export default function Sidebar() {
                             </div>
                         )}
                     </div>
-                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
-                    <LuCircleUserRound  size={20} className="flex-shrink-0" />
+                    <Link href="/user_management" className="flex items-center p-2 rounded-lg hover:bg-base-200"> 
+                    <LuCircleUserRound size={20} className="flex-shrink-0" />
                     {!isCollapsed && <span className="ml-3">User management</span>}
-                    </a>
+                    </Link>
                 </nav>
 
                 <div className="px-4 py-6 border-t border-base-300 space-y-2">
