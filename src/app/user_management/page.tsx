@@ -91,11 +91,10 @@ export default function UserManagement() {
                 />
                 {/* ปุ่ม: ดำใน Light / น้ำเงินใน Dark */}
                 <button
-                  className={`btn text-white ${
-                    theme === "dark"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : "bg-black hover:bg-gray-800"
-                  }`}
+                  className={`btn text-white ${theme === "dark"
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-black hover:bg-gray-800"
+                    }`}
                 >
                   + Add user
                 </button>
@@ -137,12 +136,12 @@ export default function UserManagement() {
                         {user.role_id === 1
                           ? "User"
                           : user.role_id === 2
-                          ? "Manager"
-                          : user.role_id === 3
-                          ? "Admin"
-                          : user.role_id === 4
-                          ? "Staff"
-                          : "-"}
+                            ? "Manager"
+                            : user.role_id === 3
+                              ? "Admin"
+                              : user.role_id === 4
+                                ? "Staff"
+                                : "-"}
                       </td>
                       <td className="p-3">{user.username}</td>
                       <td className="p-3 flex gap-2">
