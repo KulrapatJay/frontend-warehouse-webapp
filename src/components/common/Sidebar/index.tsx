@@ -1,167 +1,261 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
-import {
-    FiLogOut,
-    FiChevronLeft,
-    FiChevronDown,
-    FiMenu,
-} from "react-icons/fi";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTheme } from "@/contexts/ThemeContext";
+
+import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
 import { LuCircleUserRound } from "react-icons/lu";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    "aria-hidden"?: boolean;
+  }>;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", Icon: MdOutlineDashboard },
+  { href: "/reports", label: "Reports", Icon: TbReportSearch },
+];
 
 export default function Sidebar() {
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [theme, setTheme] = useState("light");
-    const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
-    const router = useRouter()
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
 
-    useEffect(() => {
-        const savedTheme = localStorage.getItem("theme") || "light";
-        setTheme(savedTheme);
-    }, []);
+  const router = useRouter();
+  const { logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
-    useEffect(() => {
-        document.documentElement.setAttribute("data-theme", theme);
-        localStorage.setItem("theme", theme);
-    }, [theme]);
+  const onToggleSidebar = useCallback(() => setIsCollapsed((v) => !v), []);
+  const onToggleWarehouse = useCallback(
+    () => setIsWarehouseOpen((v) => !v),
+    []
+  );
+  const onLogout = useCallback(() => {
+    logout();
+    router.push("/login");
+  }, [logout, router]);
 
-    const toggleSidebar = () => {
-        setIsCollapsed(!isCollapsed);
-    };
+  // เช็คแล้วค่อย toggle — กันการสลับซ้ำโดยไม่จำเป็น
+  const handleThemeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const wantDark = e.target.checked;
+      const isDark = theme === "dark";
+      if (wantDark !== isDark) toggleTheme();
+    },
+    [theme, toggleTheme]
+  );
 
-    const handleThemeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newTheme = e.target.checked ? "dark" : "light";
-        setTheme(newTheme);
-    };
-
-    const handleLogout = () => {
-        router.push('/login');
-    };
-
-    return (
-        <aside
-            className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
-                }`}
+  return (
+    <aside
+      className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20" : "w-64"
+      }`}
+    >
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div
+          className={`flex items-center h-16 p-4 border-b border-base-300 ${
+            isCollapsed ? "justify-center" : "justify-between"
+          }`}
         >
-            <div className="flex flex-col h-full">
-                <div
-                    className={`flex items-center h-16 p-4 border-b border-base-300 ${
-                        isCollapsed ? "justify-center" : "justify-between"
-                    }`}
+          {!isCollapsed && (
+            <Image
+              src="/assets/images/Bee Choice PNG -02.png"
+              alt="Company Logo"
+              width={80}
+              height={80}
+              className="transition-all duration-300"
+              priority
+            />
+          )}
+          <button
+            onClick={onToggleSidebar}
+            className="btn btn-ghost btn-circle"
+            aria-label="Toggle sidebar"
+          >
+            {isCollapsed ? (
+              <FiMenu size={22} aria-hidden />
+            ) : (
+              <FiChevronLeft size={22} aria-hidden />
+            )}
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 px-4 py-6 space-y-2">
+          {NAV_ITEMS.map(({ href, label, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center p-2 rounded-lg hover:bg-base-200"
+            >
+              <Icon size={20} className="flex-shrink-0" aria-hidden />
+              {!isCollapsed && <span className="ml-3">{label}</span>}
+            </Link>
+          ))}
+
+          {/* Example of collapsible group */}
+          <div>
+            <button
+              onClick={onToggleWarehouse}
+              className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200"
+              aria-expanded={isWarehouseOpen}
+              aria-controls="warehouse-submenu"
+            >
+              <div className="flex items-center">
+                <GoHome size={20} className="flex-shrink-0" aria-hidden />
+                {!isCollapsed && <span className="ml-3">Warehouse</span>}
+              </div>
+              {!isCollapsed && (
+                <FiChevronDown
+                  className={`transition-transform duration-200 ${
+                    isWarehouseOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden
+                />
+              )}
+            </button>
+
+            {isWarehouseOpen && !isCollapsed && (
+              <div id="warehouse-submenu" className="pl-8 pt-2 space-y-2">
+                {/* เปลี่ยนเป็น route จริงเมื่อพร้อม */}
+                <button
+                  type="button"
+                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
                 >
-                    {!isCollapsed && (
-                        <Image
-                            src="/assets/images/Bee Choice PNG -02.png" 
-                            alt="Company Logo"
-                            width={80}
-                            height={80}
-                            className="transition-all duration-300"
-                        />
-                    )}
-                    <button
-                        onClick={toggleSidebar}
-                        className="btn btn-ghost btn-circle"
-                    >
-                        {isCollapsed ? (
-                            <FiMenu size={22} />
-                        ) : (
-                            <FiChevronLeft size={22} />
-                        )}
-                    </button>
-                </div>
+                  Warehouse 1
+                </button>
+                <button
+                  type="button"
+                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
+                >
+                  Warehouse 2
+                </button>
+                <button
+                  type="button"
+                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
+                >
+                  Warehouse 3
+                </button>
+              </div>
+            )}
+          </div>
 
-                <nav className="flex-1 px-4 py-6 space-y-2">
-                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
-                        <MdOutlineDashboard size={20} className="flex-shrink-0" />
-                        {!isCollapsed && <span className="ml-3">Dashboard</span>}
-                    </a>
-                    <a href="#" className="flex items-center p-2 rounded-lg hover:bg-base-200">
-                        <TbReportSearch size={20} className="flex-shrink-0" />
-                        {!isCollapsed && <span className="ml-3">Reports</span>}
-                    </a>
-                    <div>
-                        <button
-                            onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
-                            className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200"
-                        >
-                            <div className="flex items-center">
-                                <GoHome size={20} className="flex-shrink-0" />
-                                {!isCollapsed && <span className="ml-3">Warehouse</span>}
-                            </div>
-                            {!isCollapsed && (
-                                <FiChevronDown
-                                    className={`transition-transform duration-200 ${isWarehouseOpen ? "rotate-180" : ""
-                                        }`}
-                                />
-                            )}
-                        </button>
-                        {isWarehouseOpen && !isCollapsed && (
-                            <div className="pl-8 pt-2 space-y-2">
-                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
-                                    Warehouse 1
-                                </a>
-                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
-                                    Warehouse 2
-                                </a>
-                                <a href="#" className="block p-2 rounded-lg hover:bg-base-300">
-                                    Warehouse 3
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                    <Link href="/user_management" className="flex items-center p-2 rounded-lg hover:bg-base-200"> 
-                    <LuCircleUserRound size={20} className="flex-shrink-0" />
-                    {!isCollapsed && <span className="ml-3">User management</span>}
-                    </Link>
-                </nav>
+          <Link
+            href="/user_management"
+            className="flex items-center p-2 rounded-lg hover:bg-base-200"
+          >
+            <LuCircleUserRound
+              size={20}
+              className="flex-shrink-0"
+              aria-hidden
+            />
+            {!isCollapsed && <span className="ml-3">User management</span>}
+          </Link>
+        </nav>
 
-                <div className="px-4 py-6 border-t border-base-300 space-y-2">
-                    <div className="flex items-center p-2 rounded-lg">
-                        {/* แสดงผลเมื่อ Sidebar ขยาย  */}
-                        {!isCollapsed && (
-                            <label className="flex cursor-pointer gap-2 items-center w-full">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></svg>
-                                <input
-                                    type="checkbox"
-                                    onChange={handleThemeChange}
-                                    checked={theme === 'dark'}
-                                    className="toggle theme-controller"
-                                />
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                                <span className="ml-2 capitalize">{theme} Mode</span>
-                            </label>
-                        )}
-                        {/* แสดงผลเมื่อ Sidebar หุบ  */}
-                        {isCollapsed && (
-                            <button
-                                onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-                                className="flex items-center justify-center w-full p-2 rounded-lg hover:bg-base-200"
-                            >
-                                {theme === 'light' ? (
-                                    // แสดงไอคอนพระอาทิตย์
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></svg>
-                                ) : (
-                                    // แสดงไอคอนพระจันทร์
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                                )}
-                            </button>
-                        )}
-                    </div>
+        {/* Footer controls */}
+        <div className="px-4 py-6 border-t border-base-300 space-y-2">
+          {/* Theme switch — expanded */}
+          {!isCollapsed && (
+            <label className="flex cursor-pointer gap-2 items-center w-full">
+              {/* sun */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                aria-hidden
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+              </svg>
+              <input
+                type="checkbox"
+                onChange={handleThemeChange}
+                checked={theme === "dark"}
+                className="toggle"
+                aria-label="Toggle dark mode"
+              />
+              {/* moon */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                aria-hidden
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+              <span className="ml-2 capitalize">{theme} mode</span>
+            </label>
+          )}
 
-                    <button onClick={handleLogout} className="flex items-center w-full p-2 rounded-lg hover:bg-base-200">
-                        <FiLogOut size={20} className="flex-shrink-0" />
-                        {!isCollapsed && <span className="ml-3">Logout</span>}
-                    </button>
+          {/* Theme switch — collapsed (icon button) */}
+          {isCollapsed && (
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-full p-2 rounded-lg hover:bg-base-200"
+              aria-label="Toggle dark mode"
+            >
+              {theme === "light" ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
+          )}
 
-                </div>
-            </div>
-        </aside>
-    );
+          {/* Logout */}
+          <button
+            onClick={onLogout}
+            className="flex items-center w-full p-2 rounded-lg hover:bg-base-200 text-error active:opacity-80 transition-colors duration-150"
+          >
+            <FiLogOut size={20} className="flex-shrink-0" aria-hidden />
+            {!isCollapsed && <span className="ml-3 font-medium">Logout</span>}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
 }

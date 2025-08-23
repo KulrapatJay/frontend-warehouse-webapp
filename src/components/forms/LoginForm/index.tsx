@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { motion } from "motion/react"
 import { User } from "@/mock/user";
+import { Role } from "@/mock/roles";
+import { useAuth } from "@/contexts/AuthContext";
 
 
 export default function LoginForm() {
   const router = useRouter();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const { login } = useAuth(); 
 
   const {
     register,
@@ -33,6 +36,12 @@ export default function LoginForm() {
     if (!result) {
       setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
     } else if (result) {
+    const role = Role.find((r) => r.id === result.role_id);
+      login({
+        username: result.username,
+        role: role ? role.role_name : "unknown",
+        name: `${result.first_name} ${result.last_name}`,
+      });
       router.push("/dashboard");
     }
   };
