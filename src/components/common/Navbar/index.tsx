@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FiUser, FiChevronRight, FiHome } from "react-icons/fi";
+import { FiUser, FiHome } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
 
 type Crumb = { label: string; href?: string };
@@ -11,7 +11,7 @@ type NavbarProps = {
   userRole?: string;
   breadcrumbs?: Crumb[];
   showHome?: boolean;
-}
+};
 
 export default function Navbar({
   userName,
@@ -22,6 +22,13 @@ export default function Navbar({
   const { user } = useAuth();
   const displayName = user?.name ?? user?.username ?? userName ?? "Guest";
   const displayRole = user?.role ?? userRole ?? "-";
+  const items = (breadcrumbs ?? [])
+    .filter((c) => c && typeof c.label === "string" && c.label.trim() !== "")
+    .map((c) => ({ ...c, label: c.label.trim() }));
+  const dedup = items.filter(
+    (c, i) => i === 0 || c.label !== items[i - 1].label
+  );
+
   return (
     <header className="bg-base-100 flex h-16 w-full items-center justify-between gap-2 border-b border-base-300 px-4">
       {/* ── Breadcrumbs  ───────────────────────────── */}
@@ -39,12 +46,10 @@ export default function Navbar({
             </li>
           )}
 
-          {breadcrumbs.map((c, idx) => {
-            const isLast = idx === breadcrumbs.length - 1;
-            const needsChevron = showHome || idx > 0;
+          {dedup.map((c, idx) => {
+            const isLast = idx === dedup.length - 1;
             return (
-              <li key={idx} className="flex items-center gap-2">
-                {needsChevron && <FiChevronRight className="opacity-50" />}
+              <li key={idx}>
                 {c.href && !isLast ? (
                   <Link href={c.href} className="hover:underline">
                     {c.label}

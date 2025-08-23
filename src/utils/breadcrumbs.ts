@@ -34,7 +34,7 @@ export const ROUTES: RouteConfig[] = [
     ],
   },
   {
-    pattern: "/user_management/create",
+    pattern: "/user_management/add_user",
     crumbs: () => [
       { label: "User management", href: "/user_management" },
       { label: "Add user" },

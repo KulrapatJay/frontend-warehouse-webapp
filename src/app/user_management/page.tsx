@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 import { User as userMock } from "@/mock/user";
 import { Prefix } from "@/mock/prefixs";
 import Link from "next/link";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type User = (typeof userMock)[number];
 type PrefixItem = { id: number; name: string };
@@ -18,41 +19,14 @@ const PAGE_SIZE_OPTIONS = [5, 10, 15, 20];
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toDelete, setToDelete] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(userMock);
+  const { theme } = useTheme();
 
   // pagination state
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(5);
-
-  // sync theme with daisyUI
-  useEffect(() => {
-    const root = document.documentElement;
-    const syncTheme = () => {
-      const domTheme = root.getAttribute("data-theme") as
-        | "light"
-        | "dark"
-        | null;
-      const stored = localStorage.getItem("theme") as "light" | "dark" | null;
-      const next = (domTheme || stored || "light") as "light" | "dark";
-      if (root.getAttribute("data-theme") !== next)
-        root.setAttribute("data-theme", next);
-      setTheme(next);
-    };
-    syncTheme();
-    const obs = new MutationObserver(syncTheme);
-    obs.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "theme") syncTheme();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => {
-      obs.disconnect();
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
 
   const prefixMap = useMemo(() => {
     const map: Record<number, string> = {};
@@ -135,13 +109,13 @@ export default function UserManagement() {
                 />
                 <Link href="/user_management/add_user">
                   <button
-                  className={`btn text-white ${
-                    theme === "dark"
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "bg-black hover:bg-gray-800"
-                  }`}
+                    className={`px-4 py-2 rounded-md text-white transition ${
+                      theme === "dark"
+                        ? "bg-blue-600 hover:bg-blue-700"
+                        : "bg-black hover:bg-gray-800"
+                    }`}
                   >
-                  + Add user
+                    + Add user
                   </button>
                 </Link>
               </div>
