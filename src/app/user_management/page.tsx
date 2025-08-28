@@ -5,6 +5,7 @@ import Sidebar from "@/components/common/Sidebar";
 import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import Navbar from "@/components/common/Navbar";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import EditUserModal from "@/components/forms/EditUserForm";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
 import toast from "react-hot-toast";
 import { User as userMock } from "@/mock/user";
@@ -23,6 +24,8 @@ export default function UserManagement() {
   const [toDelete, setToDelete] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(userMock);
   const { theme } = useTheme();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // pagination state
   const [page, setPage] = useState(1);
@@ -73,6 +76,21 @@ export default function UserManagement() {
       `ลบผู้ใช้ ${toDelete.first_name} ${toDelete.last_name} สำเร็จแล้ว`
     );
     setToDelete(null);
+  };
+
+  const handleOpenEditModal = (user: User) => {
+    setEditingUser(user);
+    setIsEditModalOpen(true);
+  };
+
+  // 4. สร้างฟังก์ชันสำหรับบันทึกข้อมูลที่แก้ไข
+  const handleSaveChanges = (updatedUser: User) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+    );
+    toast.success(`อัปเดตข้อมูล ${updatedUser.first_name} สำเร็จ!`);
+    setIsEditModalOpen(false);
+    setEditingUser(null);
   };
 
   const goto = (p: number) => setPage(Math.min(Math.max(1, p), totalPages));
@@ -168,7 +186,10 @@ export default function UserManagement() {
                       </td>
                       <td className="p-3">{user.username}</td>
                       <td className="p-3 flex gap-2">
-                        <button className="btn btn-success btn-sm gap-1 text-white">
+                        <button 
+                          className="btn btn-success btn-sm gap-1 text-white"
+                          onClick={() => handleOpenEditModal(user)}
+                        >
                           <MdOutlineModeEditOutline /> Edit
                         </button>
                         <button
@@ -271,6 +292,15 @@ export default function UserManagement() {
             setToDelete(null);
           }}
           onConfirm={handleConfirmDelete}
+        />
+        <EditUserModal
+          isOpen={isEditModalOpen}
+          user={editingUser}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingUser(null);
+          }}
+          onSave={handleSaveChanges}
         />
       </div>
     </div>
