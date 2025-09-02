@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { FiUser, FiHome } from "react-icons/fi";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 
 type Crumb = { label: string; href?: string };
 type NavbarProps = {
@@ -17,43 +18,38 @@ export default function Navbar({
   userName,
   userRole,
   breadcrumbs = [],
-  showHome = true,
+  showHome = false, 
 }: NavbarProps) {
   const { user } = useAuth();
-  const displayName = user?.name ?? user?.username ?? userName ?? "Guest";
-  const displayRole = user?.role ?? userRole ?? "-";
-  const items = (breadcrumbs ?? [])
+  const autoCrumbs = useBreadcrumbs();
+
+  const trail = (breadcrumbs && breadcrumbs.length ? breadcrumbs : autoCrumbs)
     .filter((c) => c && typeof c.label === "string" && c.label.trim() !== "")
     .map((c) => ({ ...c, label: c.label.trim() }));
-  const dedup = items.filter(
-    (c, i) => i === 0 || c.label !== items[i - 1].label
-  );
+  const dedup = trail.filter((c, i) => i === 0 || c.label !== trail[i - 1].label);
+
+  const displayName = user?.name ?? user?.username ?? userName ?? "Guest";
+  const displayRole = user?.role ?? userRole ?? "-";
+
 
   return (
     <header className="bg-base-100 flex h-16 w-full items-center justify-between gap-2 border-b border-base-300 px-4">
-      {/* ── Breadcrumbs  ───────────────────────────── */}
+      {/* Breadcrumbs */}
       <nav className="breadcrumbs text-sm">
         <ul className="flex items-center gap-2">
-          {/* Home */}
           {showHome && (
-            <li className="flex items-center gap-2">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1 hover:underline"
-              >
+            <li>
+              <Link href="/" className="inline-flex items-center gap-1 hover:underline">
                 <FiHome className="opacity-70" /> Home
               </Link>
             </li>
           )}
-
           {dedup.map((c, idx) => {
             const isLast = idx === dedup.length - 1;
             return (
-              <li key={idx}>
+              <li key={`${c.label}-${idx}`}>
                 {c.href && !isLast ? (
-                  <Link href={c.href} className="hover:underline">
-                    {c.label}
-                  </Link>
+                  <Link href={c.href} className="hover:underline">{c.label}</Link>
                 ) : (
                   <span className="font-medium">{c.label}</span>
                 )}
@@ -63,7 +59,7 @@ export default function Navbar({
         </ul>
       </nav>
 
-      {/* ── User Info ──────────────────────────────────────────────── */}
+      {/* User chip */}
       <div className="flex items-center gap-3">
         <div className="avatar">
           <div className="w-9 flex items-center justify-center">
