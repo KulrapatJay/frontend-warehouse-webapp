@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePathname } from "next/navigation";
 
 import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { GoHome } from "react-icons/go";
@@ -35,6 +36,7 @@ export default function Sidebar() {
   const router = useRouter();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const pathname = usePathname();
 
   const onToggleSidebar = useCallback(() => setIsCollapsed((v) => !v), []);
   const onToggleWarehouse = useCallback(
@@ -98,7 +100,13 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
-              className="flex items-center p-2 rounded-lg hover:bg-base-200"
+              aria-current={pathname === href ? "page" : undefined}
+              className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+              ${
+                pathname === href
+                  ? "bg-primary/10 text-primary font-medium"
+                  : ""
+              }`}
             >
               <Icon size={20} className="flex-shrink-0" aria-hidden />
               {!isCollapsed && <span className="ml-3">{label}</span>}
@@ -154,7 +162,13 @@ export default function Sidebar() {
 
           <Link
             href="/user_management"
-            className="flex items-center p-2 rounded-lg hover:bg-base-200"
+            aria-current={pathname === "/user_management" ? "page" : undefined}
+            className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+            ${
+              pathname === "/user_management"
+                ? "bg-primary/10 text-primary font-medium"
+                : ""
+            }`}
           >
             <LuCircleUserRound
               size={20}

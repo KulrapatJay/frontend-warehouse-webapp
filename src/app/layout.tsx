@@ -1,6 +1,5 @@
-import CustomToaster from "@/components/ui/Alert";
+
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import React from "react";
 import "./globals.css";
 
@@ -23,12 +22,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning={true}>
         <AuthProvider>
-          <ThemeProvider>
-            {children}
-            <CustomToaster />
-          </ThemeProvider>
+              {children}
         </AuthProvider>
       </body>
     </html>

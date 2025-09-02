@@ -1,20 +1,9 @@
 export type Crumb = { label: string; href?: string };
-type Loader = (param: string) => Promise<string> | string;
+
 
 type RouteConfig = {
   pattern: string;
   crumbs: (params: Record<string, string>) => Crumb[] | Promise<Crumb[]>;
-};
-
-// === ตัวอย่าง loader: แปลง userId -> ชื่อผู้ใช้ (mock) ===
-const fetchUserLabel: Loader = async (id) => {
-  // ที่จริงค่อยไปเรียก API: `/api/users/${id}`
-  // ตัวอย่าง mock สั้น ๆ:
-  const names: Record<string, string> = {
-    "1111": "Jay carter",
-    "1112": "Kevin smith",
-  };
-  return names[id] ?? `User #${id}`;
 };
 
 export const ROUTES: RouteConfig[] = [
@@ -25,13 +14,6 @@ export const ROUTES: RouteConfig[] = [
   {
     pattern: "/user_management",
     crumbs: () => [{ label: "User management", href: "/user_management" }],
-  },
-  {
-    pattern: "/user_management/edit/[id]",
-    crumbs: async (p) => [
-      { label: "User management", href: "/user_management" },
-      { label: `Edit: ${await fetchUserLabel(p.id)}` },
-    ],
   },
   {
     pattern: "/user_management/add_user",
