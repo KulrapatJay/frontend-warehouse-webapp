@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useMemo } from "react";
-// ✅ Import new components
-import KpiCard from "@/components/reports/KpiCard"; // Adjust path as needed
-import ChartCard from "@/components/reports/ChartCard"; // Adjust path as needed
-import BarChart from "@/components/reports/BarChart"; // Adjust path as needed
+
+import KpiCard from "@/components/reports/KpiCard"; 
+import ChartCard from "@/components/reports/ChartCard";
+import BarChart from "@/components/reports/BarChart"; 
 
 /** ========= Mock Data ========= */
 const mockDailyBar = [1500, 1600, 1550, 1800, 2200, 2500, 2400];
