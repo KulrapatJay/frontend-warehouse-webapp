@@ -1,9 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Sidebar from "@/components/common/Sidebar";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import Navbar from "@/components/common/Navbar";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import EditUserModal from "@/components/forms/EditUserForm";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
@@ -15,8 +12,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 
 type User = (typeof userMock)[number];
 type PrefixItem = { id: number; name: string };
-
-const PAGE_SIZE_OPTIONS = [5, 10, 15, 20];
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,7 +89,6 @@ export default function UserManagement() {
   };
 
   const goto = (p: number) => setPage(Math.min(Math.max(1, p), totalPages));
-  const crumbs = useBreadcrumbs();
 
  return (
     <>

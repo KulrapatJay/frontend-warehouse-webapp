@@ -26,6 +26,10 @@ export const ROUTES: RouteConfig[] = [
       { label: "Add user" },
     ],
   },
+    {
+    pattern: "/product_management",
+    crumbs: () => [{ label: "Product management", href: "/product_management" }],
+  },
 ];
 
 /** แตก path เป็น segment และดึงพารามิเตอร์ตาม pattern */
