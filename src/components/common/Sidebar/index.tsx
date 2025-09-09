@@ -29,14 +29,23 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "Reports", Icon: TbReportSearch },
 ];
 
+// <-- 1. สร้าง Array สำหรับลิงก์ Warehouse เพื่อให้จัดการง่าย
+const WAREHOUSE_LINKS = [
+  { href: "/warehouse/1", label: "Warehouse 1" },
+  { href: "/warehouse/2", label: "Warehouse 2" },
+  { href: "/warehouse/3", label: "Warehouse 3" },
+];
+
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
+
 
   const router = useRouter();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
+  const isWarehouseActive = pathname.startsWith('/warehouse');
+  const [isWarehouseOpen, setIsWarehouseOpen] = useState(isWarehouseActive);
 
   const onToggleSidebar = useCallback(() => setIsCollapsed((v) => !v), []);
   const onToggleWarehouse = useCallback(
@@ -60,16 +69,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${
-        isCollapsed ? "w-20" : "w-64"
-      }`}
+      className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
+        }`}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className={`flex items-center h-16 p-4 border-b border-base-300 ${
-            isCollapsed ? "justify-center" : "justify-between"
-          }`}
+          className={`flex items-center h-16 p-4 border-b border-base-300 ${isCollapsed ? "justify-center" : "justify-between"
+            }`}
         >
           {!isCollapsed && (
             <Image
@@ -102,22 +109,26 @@ export default function Sidebar() {
               href={href}
               aria-current={pathname === href ? "page" : undefined}
               className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-              ${
-                pathname === href
+              ${pathname === href
                   ? "bg-primary/10 text-primary font-medium"
                   : ""
-              }`}
+                }`}
             >
               <Icon size={20} className="flex-shrink-0" aria-hidden />
               {!isCollapsed && <span className="ml-3">{label}</span>}
             </Link>
           ))}
 
-          {/* Example of collapsible group */}
+          {/* Warehouse collapsible group */}
           <div>
             <button
               onClick={onToggleWarehouse}
-              className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200"
+              className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
+    ${isWarehouseActive
+                  ? "bg-primary/10 text-primary font-medium"
+                  : ""
+                }
+    `}
               aria-expanded={isWarehouseOpen}
               aria-controls="warehouse-submenu"
             >
@@ -127,9 +138,8 @@ export default function Sidebar() {
               </div>
               {!isCollapsed && (
                 <FiChevronDown
-                  className={`transition-transform duration-200 ${
-                    isWarehouseOpen ? "rotate-180" : ""
-                  }`}
+                  className={`transition-transform duration-200 ${isWarehouseOpen ? "rotate-180" : ""
+                    }`}
                   aria-hidden
                 />
               )}
@@ -137,38 +147,32 @@ export default function Sidebar() {
 
             {isWarehouseOpen && !isCollapsed && (
               <div id="warehouse-submenu" className="pl-8 pt-2 space-y-2">
-                {/* เปลี่ยนเป็น route จริงเมื่อพร้อม */}
-                <button
-                  type="button"
-                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
-                >
-                  Warehouse 1
-                </button>
-                <button
-                  type="button"
-                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
-                >
-                  Warehouse 2
-                </button>
-                <button
-                  type="button"
-                  className="block w-full text-left p-2 rounded-lg hover:bg-base-300"
-                >
-                  Warehouse 3
-                </button>
+                {WAREHOUSE_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={pathname === link.href ? "page" : undefined}
+                    className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
+          ${pathname === link.href
+                        ? "bg-primary/10 text-primary font-medium" // <-- ทำให้สไตล์เหมือนเมนูหลัก
+                        : ""
+                      }
+          `}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
             )}
           </div>
-
           <Link
             href="/user_management"
             aria-current={pathname === "/user_management" ? "page" : undefined}
             className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${
-              pathname === "/user_management"
+            ${pathname === "/user_management"
                 ? "bg-primary/10 text-primary font-medium"
                 : ""
-            }`}
+              }`}
           >
             <LuCircleUserRound
               size={20}
