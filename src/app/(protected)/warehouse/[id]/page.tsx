@@ -4,7 +4,6 @@
 import React, { use, useState, useEffect } from 'react';
 
 // --- (ส่วนของข้อมูลจำลอง และ Types) ---
-// ## แก้ไข Type: แยก sku ออกเป็น productCode และ skuCode ##
 type Product = {
   id: number;
   productCode: string; // รหัสสินค้าหลัก
@@ -17,20 +16,22 @@ type Product = {
   lastUpdated: string;
 };
 
+// ## เพิ่ม dailyInbound ใน Type ##
 type WarehouseData = {
   name: string;
   stats: {
     totalInbound: number;
     totalOutbound: number;
+    dailyInbound: number; // สินค้าเข้ารายวัน
   };
   products: Product[];
 };
 
-// ## อัปเดตข้อมูลตัวอย่างให้ตรงกับ Type ใหม่ ##
+// ## อัปเดตข้อมูลตัวอย่างให้มี dailyInbound ##
 const allWarehouseData: { [key: string]: WarehouseData } = {
   '1': {
     name: 'Warehouse 1',
-    stats: { totalInbound: 850, totalOutbound: 620 },
+    stats: { totalInbound: 850, totalOutbound: 620, dailyInbound: 55 },
     products: [
       { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, status: 'In Stock', responsible: 'สมชาย', lastUpdated: '2025-09-01' },
       { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, status: 'In Stock', responsible: 'สมศรี', lastUpdated: '2025-09-02' },
@@ -39,7 +40,7 @@ const allWarehouseData: { [key: string]: WarehouseData } = {
   },
   '2': {
     name: 'Warehouse 2',
-    stats: { totalInbound: 210, totalOutbound: 185 },
+    stats: { totalInbound: 210, totalOutbound: 185, dailyInbound: 15 },
     products: [
       { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, status: 'In Stock', responsible: 'วิชัย', lastUpdated: '2025-09-01' },
       { id: 5, productCode: 'PI-APL', skuCode: 'PI-APL-01', name: 'พายแอปเปิ้ล', category: 'Pie', quantity: 5, status: 'Low Stock', responsible: 'วิชัย', lastUpdated: '2025-08-28' },
@@ -49,7 +50,7 @@ const allWarehouseData: { [key: string]: WarehouseData } = {
   },
   '3': {
     name: 'Warehouse 3',
-    stats: { totalInbound: 5500, totalOutbound: 4800 },
+    stats: { totalInbound: 5500, totalOutbound: 4800, dailyInbound: 320 },
     products: [
       { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, status: 'In Stock', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
       { id: 9, productCode: 'RM-YST', skuCode: 'RM-YST-01', name: 'ยีสต์ (ซอง)', category: 'Ingredient', quantity: 1500, status: 'In Stock', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
@@ -84,6 +85,13 @@ export default function WarehousePage({ params }: WarehousePageProps) {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  
+  const today = new Date();
+  const formattedDate = new Intl.DateTimeFormat('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(today);
 
   useEffect(() => {
     if (data?.products) {
@@ -93,8 +101,8 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           product.name.toLowerCase().includes(term) ||
           product.category.toLowerCase().includes(term) ||
           product.responsible.toLowerCase().includes(term) ||
-          product.productCode.toLowerCase().includes(term) || // เพิ่มการค้นหาจากรหัสสินค้า
-          product.skuCode.toLowerCase().includes(term)       // เพิ่มการค้นหาจากรหัส SKU
+          product.productCode.toLowerCase().includes(term) ||
+          product.skuCode.toLowerCase().includes(term)
         );
       });
       setFilteredProducts(results);
@@ -114,19 +122,39 @@ export default function WarehousePage({ params }: WarehousePageProps) {
   return (
     <main className="p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Card: สินค้าเข้ารวันนี้ */}
           <div className="stats bg-base-100 shadow">
             <div className="stat">
-              <div className="stat-title">สินค้าเข้ารวม</div>
-              <div className="stat-value text-success">{data.stats.totalInbound.toLocaleString()}</div>
-              <div className="stat-desc">ชิ้น</div>
+              <div className="stat-title">สินค้าเข้าวันนี้</div>
+              <div className="stat-value text-info">{data.stats.dailyInbound.toLocaleString()}</div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
             </div>
           </div>
+          {/* Card: สินค้าเข้ารวม */}
           <div className="stats bg-base-100 shadow">
             <div className="stat">
-              <div className="stat-title">สินค้าออกรวม</div>
+              <div className="stat-title">สินค้าเข้ารวม </div>
+              <div className="stat-value text-success">{data.stats.totalInbound.toLocaleString()}</div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
+            </div>
+          </div>
+          {/* Card: สินค้าออกรวม */}
+          <div className="stats bg-base-100 shadow">
+            <div className="stat">
+              <div className="stat-title">สินค้าออกรวม </div>
               <div className="stat-value text-error">{data.stats.totalOutbound.toLocaleString()}</div>
-              <div className="stat-desc">ชิ้น</div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -135,7 +163,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           <div className="card-body">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
               <h2 className="card-title">
-                รายการสินค้าทั้งหมด {filteredProducts.length} รายการ
+                รายการสินค้าทั้งหมด ({filteredProducts.length})
               </h2>
               <input
                 type="text"
@@ -163,7 +191,6 @@ export default function WarehousePage({ params }: WarehousePageProps) {
                 <tbody>
                   {filteredProducts.map((product) => (
                     <tr key={product.id} className="hover border-b">
-                      {/* ## แสดงผลโดยตรง ไม่ต้องตัดข้อความ ## */}
                       <td className="p-4 font-mono">{product.productCode}</td>
                       <td className="p-4 font-mono">{product.skuCode}</td>
                       <td className="p-4">{product.name}</td>
