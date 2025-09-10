@@ -9,6 +9,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { usePathname } from "next/navigation";
 
 import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
+import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
@@ -180,6 +181,23 @@ export default function Sidebar() {
               aria-hidden
             />
             {!isCollapsed && <span className="ml-3">User management</span>}
+          </Link>
+          <Link
+            href="/product_management"
+            aria-current={pathname === "/product_management" ? "page" : undefined}
+            className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+            ${
+              pathname === "/product_management"
+                ? "bg-primary/10 text-primary font-medium"
+                : ""
+            }`}
+          >
+            <LuBox
+              size={20}
+              className="flex-shrink-0"
+              aria-hidden
+            />
+            {!isCollapsed && <span className="ml-3">Product management</span>}
           </Link>
         </nav>
 

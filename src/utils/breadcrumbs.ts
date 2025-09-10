@@ -33,6 +33,17 @@ export const ROUTES: RouteConfig[] = [
       { label: "Add user" },
     ],
   },
+  {
+    pattern: "/product_management/add_product",
+    crumbs: () => [
+      { label: "Product management", href: "/product_management" },
+      { label: "Add product" },
+    ],
+  },
+    {
+    pattern: "/product_management",
+    crumbs: () => [{ label: "Product management", href: "/product_management" }],
+  },
 ];
 
 /** แตก path เป็น segment และดึงพารามิเตอร์ตาม pattern */

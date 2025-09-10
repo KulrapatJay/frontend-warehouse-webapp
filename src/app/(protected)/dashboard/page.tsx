@@ -1,13 +1,11 @@
 "use client";
 
-// 1. นำเข้า (import) Component ที่แยกออกไป
 import KpiCards from "@/components/dashboard/KpiCards";
 import TotalSalesChart from "@/components/dashboard/TotalSalesChart";
 import TopProductsChart from "@/components/dashboard/TopProductsChart";
 
 export default function DashboardPage() {
   
-  // ✨ ส่วนที่มีการเปลี่ยนแปลง (เพิ่มข้อมูลอีก 6 รายการ)
   const recentOrdersData = [
     {
       id: "#5678",

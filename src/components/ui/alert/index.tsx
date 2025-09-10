@@ -26,7 +26,7 @@ export default function CustomToaster() {
 
   return (
     <Toaster
-      position="top-center"
+      position="top-right"
       toastOptions={{
         style: {
           background: theme === "dark" ? "#1f2937" : "white", // dark = gray-800, light = white
