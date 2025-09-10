@@ -63,11 +63,6 @@ export default function AddProductPage() {
   const categories = ["Bakery", "Pastry", "Beverage", "Snack"];
   const units = ["ชิ้น", "กล่อง", "lot", "ชุด"];
 
-  // Log error ของฟอร์มออกมาดูใน Console ของเบราว์เซอร์
-  if (Object.keys(errors).length > 0) {
-    console.log("Form Errors:", errors);
-  }
-
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="card bg-base-100 shadow-xl">
@@ -84,7 +79,6 @@ export default function AddProductPage() {
                     ข้อมูลทั่วไป
                   </h3>
                   <div className="form-control">
-                    {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
                     <label className="label block">
                       <span className="label-text mb-2">ชื่อสินค้า</span>
                     </label>
@@ -103,7 +97,6 @@ export default function AddProductPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-control">
-                      {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
                       <label className="label block">
                         <span className="label-text mb-2">
                           รหัสสินค้า (Code)
