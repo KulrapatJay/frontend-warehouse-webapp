@@ -13,7 +13,14 @@ export const ROUTES: RouteConfig[] = [
   },
   {
     pattern: "/reports",
-    crumbs: () => [{ label: "Reports"}],
+    crumbs: () => [{ label: "Reports" }],
+  },
+  {
+    pattern: "/warehouse/[id]",
+    crumbs: (params) => [
+      { label: "Warehouse" },
+      { label: params.id },
+    ],
   },
   {
     pattern: "/user_management",
