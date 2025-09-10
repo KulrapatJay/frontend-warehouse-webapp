@@ -30,7 +30,7 @@ export const addProductSchema = z.object({
     .int("จำนวนต้องเป็นจำนวนเต็ม")
     .min(0, "จำนวนต้องไม่ติดลบ"),
   unit: z.string().min(1, "กรุณาเลือกหน่วย"),
-  date: z.string().min(1, "กรุณาเลือกวันที่"),
+  // date: z.string().min(1, "กรุณาเลือกวันที่"),
   barcode: z.string().optional().or(z.literal("")),
   imageFile: z.any().optional(),
 

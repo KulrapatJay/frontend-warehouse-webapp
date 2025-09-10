@@ -3,24 +3,31 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TAddProduct, addProductSchema } from "@/lib/validators";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FaUpload } from "react-icons/fa";
+import toast from "react-hot-toast";
 
-// Mock function for submission
 async function addProduct(data: TAddProduct) {
   console.log("Submitting new product:", data);
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  alert("สินค้าถูกเพิ่มเรียบร้อยแล้ว!");
+  const toastId = toast.loading("กำลังบันทึกสินค้า...");
+
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  toast.success("สินค้าถูกเพิ่มเรียบร้อยแล้ว!", { id: toastId });
 }
 
 export default function AddProductPage() {
   const [preview, setPreview] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState<TAddProduct | null>(null);
+  const modalRef = useRef<HTMLDialogElement>(null);
 
   const {
     register,
     handleSubmit,
     setValue,
-    formState: { errors, isSubmitting }
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<TAddProduct>({
     resolver: zodResolver(addProductSchema),
     defaultValues: {
@@ -30,148 +37,305 @@ export default function AddProductPage() {
     },
   });
 
-  const onSubmit = async (data: TAddProduct) => {
-    await addProduct(data);
+  useEffect(() => {
+    if (isModalOpen) {
+      modalRef.current?.showModal();
+    } else {
+      modalRef.current?.close();
+    }
+  }, [isModalOpen]);
+
+  const onValidSubmit = (data: TAddProduct) => {
+    setFormData(data);
+    setIsModalOpen(true);
   };
-  
-  // Dummy data for dropdowns
+
+  const handleConfirmSubmit = async () => {
+    if (formData) {
+      await addProduct(formData);
+      setFormData(null);
+      setIsModalOpen(false);
+      setPreview(null);
+      reset();
+    }
+  };
+
   const categories = ["Bakery", "Pastry", "Beverage", "Snack"];
   const units = ["ชิ้น", "กล่อง", "lot", "ชุด"];
 
+  // Log error ของฟอร์มออกมาดูใน Console ของเบราว์เซอร์
+  if (Object.keys(errors).length > 0) {
+    console.log("Form Errors:", errors);
+  }
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <form onSubmit={handleSubmit(onSubmit)}>
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">เพิ่มสินค้าใหม่</h1>
-          {/* อาจจะมีปุ่มอื่นๆ ตรงนี้ได้ในอนาคต */}
-        </div>
+      <div className="card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <form onSubmit={handleSubmit(onValidSubmit)}>
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold">เพิ่มสินค้าใหม่</h1>
+            </div>
 
-        {/* Main Layout Grid (2 columns on large screens) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* --- Left Column: Main product info --- */}
-          <div className="lg:col-span-2">
-            <div className="card bg-base-100 shadow-lg">
-              <div className="card-body space-y-6">
-                
-                {/* Section: General Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-8">
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">ข้อมูลทั่วไป</h3>
+                  <h3 className="font-semibold text-lg border-b pb-2">
+                    ข้อมูลทั่วไป
+                  </h3>
                   <div className="form-control">
-                    <label className="label"><span className="label-text">ชื่อสินค้า</span></label>
-                    <input type="text" {...register("name")} className={`input input-bordered ${errors.name ? 'input-error' : ''}`} />
-                    {errors.name && <span className="text-error text-sm mt-1">{errors.name.message}</span>}
+                    {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
+                    <label className="label block">
+                      <span className="label-text mb-2">ชื่อสินค้า</span>
+                    </label>
+                    <input
+                      type="text"
+                      {...register("name")}
+                      className={`input input-bordered ${
+                        errors.name ? "input-error" : ""
+                      }`}
+                    />
+                    {errors.name && (
+                      <span className="text-error text-sm mt-1">
+                        {errors.name.message}
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-control">
-                      <label className="label"><span className="label-text">รหัสสินค้า (Code)</span></label>
-                      <input type="text" {...register("code")} className={`input input-bordered ${errors.code ? 'input-error' : ''}`} />
-                      {errors.code && <span className="text-error text-sm mt-1">{errors.code.message}</span>}
+                      {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
+                      <label className="label block">
+                        <span className="label-text mb-2">
+                          รหัสสินค้า (Code)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        {...register("code")}
+                        className={`input input-bordered ${
+                          errors.code ? "input-error" : ""
+                        }`}
+                      />
+                      {errors.code && (
+                        <span className="text-error text-sm mt-1">
+                          {errors.code.message}
+                        </span>
+                      )}
                     </div>
                     <div className="form-control">
-                      <label className="label"><span className="label-text">บาร์โค้ด (Barcode)</span></label>
-                      <input type="text" {...register("barcode")} className="input input-bordered" />
+                      {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
+                      <label className="label block">
+                        <span className="label-text mb-2">
+                          บาร์โค้ด (Barcode)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        {...register("barcode")}
+                        className="input input-bordered"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Section: Stock and Pricing */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg border-b pb-2">สต็อกและราคา</h3>
+                  <h3 className="font-semibold text-lg border-b pb-2">
+                    ราคาและสต็อก
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="form-control">
-                      <label className="label"><span className="label-text">ราคา</span></label>
-                      <input type="number" step="0.01" {...register("price")} className={`input input-bordered ${errors.price ? 'input-error' : ''}`} />
-                      {errors.price && <span className="text-error text-sm mt-1">{errors.price.message}</span>}
+                      <label className="label mb-1">
+                        <span className="label-text">ราคา</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        {...register("price")}
+                        className={`input input-bordered ${
+                          errors.price ? "input-error" : ""
+                        }`}
+                      />
+                      {errors.price && (
+                        <span className="text-error text-sm mt-1">
+                          {errors.price.message}
+                        </span>
+                      )}
                     </div>
                     <div className="form-control">
-                      <label className="label"><span className="label-text">จำนวน</span></label>
-                      <input type="number" {...register("qty")} className={`input input-bordered ${errors.qty ? 'input-error' : ''}`} />
-                      {errors.qty && <span className="text-error text-sm mt-1">{errors.qty.message}</span>}
+                      <label className="label mb-1">
+                        <span className="label-text">จำนวน</span>
+                      </label>
+                      <input
+                        type="number"
+                        {...register("qty")}
+                        className={`input input-bordered ${
+                          errors.qty ? "input-error" : ""
+                        }`}
+                      />
+                      {errors.qty && (
+                        <span className="text-error text-sm mt-1">
+                          {errors.qty.message}
+                        </span>
+                      )}
                     </div>
-                     <div className="form-control">
-                      <label className="label"><span className="label-text">หน่วยนับ</span></label>
-                       <select {...register("unit")} className={`select select-bordered ${errors.unit ? 'select-error' : ''}`}>
-                         <option disabled selected value="">-- เลือกหน่วย --</option>
-                         {units.map(u => <option key={u} value={u}>{u}</option>)}
+                    <div className="form-control">
+                      <label className="label mb-1">
+                        <span className="label-text">หน่วยนับ</span>
+                      </label>
+                      <select
+                        {...register("unit")}
+                        className={`select select-bordered ${
+                          errors.unit ? "select-error" : ""
+                        }`}
+                      >
+                        <option disabled selected value="">
+                          -- เลือกหน่วย --
+                        </option>
+                        {units.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
                       </select>
-                      {errors.unit && <span className="text-error text-sm mt-1">{errors.unit.message}</span>}
+                      {errors.unit && (
+                        <span className="text-error text-sm mt-1">
+                          {errors.unit.message}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                 <div className="form-control w-full md:w-1/3">
-                    <label className="label"><span className="label-text">วันที่</span></label>
-                    <input type="date" {...register("date")} className={`input input-bordered ${errors.date ? 'input-error' : ''}`} />
-                    {errors.date && <span className="text-error text-sm mt-1">{errors.date.message}</span>}
-                 </div>
 
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg border-b pb-2">
+                    การจัดหมวดหมู่
+                  </h3>
+                  <div className="form-control">
+                    <label className="label mb-1">
+                      <span className="label-text">เลือกหมวดหมู่สินค้า</span>
+                    </label>
+                    <select
+                      {...register("category")}
+                      className={`select select-bordered w-full md:w-1/2 ${
+                        errors.category ? "select-error" : ""
+                      }`}
+                    >
+                      <option disabled selected value="">
+                        -- เลือกหมวดหมู่ --
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.category && (
+                      <span className="text-error text-sm mt-1">
+                        {errors.category.message}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* --- Right Column: Image and Category --- */}
-          <div className="lg:col-span-1 space-y-8">
-            <div className="card bg-base-100 shadow-lg">
-              <div className="card-body">
-                <h3 className="card-title">รูปภาพสินค้า</h3>
-                <div className="form-control">
-                   <div className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col justify-center items-center text-center p-4">
+              {/* ... ส่วนของรูปภาพและปุ่ม เหมือนเดิม ... */}
+              <div className="lg:col-span-1">
+                <div className="card bg-base-200 p-4 h-full">
+                  <h3 className="card-title mb-2">รูปภาพสินค้า</h3>
+                  <div className="form-control">
+                    <div className="w-full h-48 border-2 border-dashed rounded-lg flex flex-col justify-center items-center text-center p-4 bg-base-100">
                       {preview ? (
-                        <img src={preview} alt="Preview" className="max-h-full max-w-full object-contain" />
+                        <img
+                          src={preview}
+                          alt="Preview"
+                          className="max-h-full max-w-full object-contain"
+                        />
                       ) : (
                         <>
-                          <FaUpload className="text-4xl opacity-50 mb-2"/>
-                          <p className="text-sm opacity-70">ลากและวางไฟล์ที่นี่</p>
+                          <FaUpload className="text-4xl opacity-50 mb-2" />
+                          <p className="text-sm opacity-70">
+                            ลากและวางไฟล์ที่นี่
+                          </p>
                           <p className="text-xs opacity-50">หรือ</p>
                         </>
                       )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-input file-input-bordered w-full mt-4"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setValue("imageFile", file);
+                          setPreview(URL.createObjectURL(file));
+                        } else {
+                          setValue("imageFile", null);
+                          setPreview(null);
+                        }
+                      }}
+                    />
+                    {errors.imageFile && (
+                      <span className="text-error text-sm mt-1">
+                        {errors.imageFile.message as string}
+                      </span>
+                    )}
+                    <p className="text-xs opacity-60 mt-2">
+                      ขนาดไฟล์ไม่เกิน 2MB (JPG, PNG, WebP)
+                    </p>
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="file-input file-input-bordered w-full mt-4"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setValue("imageFile", file);
-                        setPreview(URL.createObjectURL(file));
-                      } else {
-                        setValue("imageFile", null);
-                        setPreview(null);
-                      }
-                    }}
-                  />
-                  {errors.imageFile && <span className="text-error text-sm mt-1">{errors.imageFile.message as string}</span>}
-                  <p className="text-xs opacity-60 mt-2">ขนาดไฟล์ไม่เกิน 2MB (JPG, PNG, WebP)</p>
                 </div>
               </div>
             </div>
-            <div className="card bg-base-100 shadow-lg">
-              <div className="card-body">
-                <h3 className="card-title">หมวดหมู่</h3>
-                <div className="form-control">
-                  <label className="label"><span className="label-text">เลือกหมวดหมู่สินค้า</span></label>
-                  <select {...register("category")} className={`select select-bordered ${errors.category ? 'select-error' : ''}`}>
-                    <option disabled selected value="">-- เลือกหมวดหมู่ --</option>
-                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                  </select>
-                  {errors.category && <span className="text-error text-sm mt-1">{errors.category.message}</span>}
-                </div>
-              </div>
+
+            <div className="mt-8 flex justify-end gap-4">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => history.back()}
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSubmitting}
+              >
+                บันทึกสินค้า
+              </button>
             </div>
+          </form>
+        </div>
+      </div>
+      <dialog className={`modal ${isModalOpen ? "modal-open" : ""}`}>
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">ยืนยันการแก้ไข</h3>
+          <p className="py-4">คุณต้องการบันทึกการเปลี่ยนแปลงนี้ใช่หรือไม่?</p>
+          <div className="modal-action">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setIsModalOpen(false)}
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleConfirmSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <span className="loading loading-spinner"></span>
+              )}
+              ยืนยัน
+            </button>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8 flex justify-end gap-4">
-           <button type="button" className="btn btn-ghost" onClick={() => history.back()}>ยกเลิก</button>
-           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-             {isSubmitting && <span className="loading loading-spinner"></span>}
-             บันทึกสินค้า
-           </button>
-        </div>
-      </form>
+        <form method="dialog" className="modal-backdrop">
+          <button onClick={() => setIsModalOpen(false)}>close</button>
+        </form>
+      </dialog>
     </div>
   );
 }

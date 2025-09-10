@@ -1,7 +1,7 @@
 // เพิ่ม 'use client' ไว้ด้านบนสุดของไฟล์ เป็น best practice สำหรับ component ที่อาจมี interaction
 'use client';
 
-import React, { use, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // --- (ส่วนของข้อมูลจำลอง และ Types) ---
 type Product = {
@@ -74,13 +74,13 @@ const getStatusBadgeClass = (status: Product['status']) => {
 };
 
 type WarehousePageProps = {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 };
 
 export default function WarehousePage({ params }: WarehousePageProps) {
-  const { id } = use(params);
+  const { id } = (params);
   const data = allWarehouseData[id];
 
   const [searchTerm, setSearchTerm] = useState('');
