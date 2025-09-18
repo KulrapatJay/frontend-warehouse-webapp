@@ -37,7 +37,7 @@ function TableCard({
 }: {
   title: string;
   amount: string;
-  badge: "Month" | "Day";
+  badge: "เดือน" | "สัปดาห์";
   children: React.ReactNode;
   change?: string;
   down?: boolean;
@@ -152,19 +152,19 @@ export default function ReportPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6">
               <KpiCard
-                title="Total Sales"
+                title="ยอดขายรวม"
                 value={`฿${totalMonthTHB.toLocaleString("th-TH")}`}
                 subtitle={dateRange30Days}
                 change="+12.5%"
               />
               <KpiCard
-                title="Total Orders Today"
+                title="ยอดคำสั่งซื้อสัปดาห์นี้"
                 value={ordersToday.toLocaleString("th-TH")}
                 subtitle={todayFormatted}
                 change="+5.1%"
               />
               <KpiCard
-                title="Total Sales Today"
+                title="ยอดขายสัปดาห์นี้"
                 value={`฿${salesTodayTHB.toLocaleString("th-TH")}`}
                 subtitle={todayFormatted}
                 change="-2.3%"
@@ -174,9 +174,9 @@ export default function ReportPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
               <ChartCard 
-                title="Total Sales" 
+                title="ยอดขายรวม" 
                 amount={`฿${salesData13Months[salesData13Months.length - 1].toLocaleString()}`} 
-                badge="Month"
+                badge="เดือน"
                 change="15.2%"
                 subtitle="ก.ย. 67 - ก.ย. 68"
               >
@@ -187,9 +187,9 @@ export default function ReportPage() {
               </ChartCard>
               
               <ChartCard 
-                title="Total Sales" 
+                title="ยอดขายรวม" 
                 amount={`฿${mockDailyBar[mockDailyBar.length - 1].toLocaleString()}`} 
-                badge="Day"
+                badge="สัปดาห์"
                 change="1.8%"
                 down
                 subtitle={dateRange7Days}
@@ -203,9 +203,9 @@ export default function ReportPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
               <ChartCard 
-                title="Total Order" 
+                title="ยอดคำสั่งซื้อ" 
                 amount={ordersData13Months[ordersData13Months.length - 1].toLocaleString()} 
-                badge="Month"
+                badge="เดือน"
                 change="7.1%"
                 subtitle="ก.ย. 67 - ก.ย. 68"
               >
@@ -216,9 +216,9 @@ export default function ReportPage() {
               </ChartCard>
               
               <ChartCard 
-                title="Total Order" 
+                title="ยอดคำสั่งซื้อ" 
                 amount={`${Math.round(mockDailyBar[mockDailyBar.length-1] / 100)}`}
-                badge="Day"
+                badge="สัปดาห์"
                 change="3.4%"
                 subtitle={dateRange7Days}
               >
@@ -231,9 +231,9 @@ export default function ReportPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
               <TableCard
-                title="Top Selling Products"
+                title="สินค้าขายดีที่สุด"
                 amount={`฿${totalSalesInTopMonth.toLocaleString()}`}
-                badge="Month"
+                badge="เดือน"
                 change="+5.8%"
                 subtitle={dateRange30Days} 
               >
@@ -260,9 +260,9 @@ export default function ReportPage() {
               </TableCard>
 
               <TableCard
-                title="Top Selling Products"
+                title="สินค้าขายดีที่สุด"
                 amount={`฿${totalSalesInTopDay.toLocaleString()}`}
-                badge="Day"
+                badge="สัปดาห์"
                 change="-0.5%"
                 down
                 subtitle={dateRange7Days}

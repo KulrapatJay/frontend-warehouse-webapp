@@ -96,13 +96,13 @@ export default function UserManagement() {
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm opacity-70">
-            All users <span className="font-semibold opacity-100">{filteredUsers.length}</span>
+            ผู้ใช้ทั้งหมด <span className="font-semibold opacity-100">{filteredUsers.length}</span>
           </span>
 
           <div className="flex items-center gap-2">
             <input
               type="text"
-              placeholder="Search by name..."
+              placeholder="ค้นหาจากชื่อ..."
               className="input input-bordered w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -113,7 +113,7 @@ export default function UserManagement() {
                   theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : "bg-black hover:bg-gray-800"
                 }`}
               >
-                + Add user
+                + เพิ่มผู้ใช้
               </button>
             </Link>
           </div>
@@ -125,13 +125,13 @@ export default function UserManagement() {
             <thead className="bg-base-200">
               <tr className="font-semibold">
                 <th className="p-3"><input type="checkbox" className="checkbox checkbox-sm" /></th>
-                <th className="p-3">prefix</th>
-                <th className="p-3">first name</th>
-                <th className="p-3">last name</th>
-                <th className="p-3">ID</th>
-                <th className="p-3">Role</th>
-                <th className="p-3">username</th>
-                <th className="p-3">Actions</th>
+                <th className="p-3">คำนำหน้า</th>
+                <th className="p-3">ชื่อ</th>
+                <th className="p-3">นามสกุล</th>
+                <th className="p-3">รหัสพนักงาน</th>
+                <th className="p-3">ตำเเหน่ง</th>
+                <th className="p-3">ชื่อผู้ใช้</th>
+                <th className="p-3">การจัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -151,16 +151,16 @@ export default function UserManagement() {
                   <td className="p-3">{user.username}</td>
                   <td className="p-3 flex gap-2">
                     <button className="btn btn-success btn-sm gap-1 text-white" onClick={() => handleOpenEditModal(user)}>
-                      <MdOutlineModeEditOutline /> Edit
+                      <MdOutlineModeEditOutline /> เเก้ไข
                     </button>
                     <button className="btn btn-error btn-sm gap-1 text-white" onClick={() => handleAskDelete(user)}>
-                      <MdOutlineDelete /> Delete
+                      <MdOutlineDelete /> ลบ
                     </button>
                   </td>
                 </tr>
               ))}
               {pagedUsers.length === 0 && (
-                <tr><td colSpan={8} className="p-6 text-center opacity-70">No users found</td></tr>
+                <tr><td colSpan={8} className="p-6 text-center opacity-70">ไม่พบผู้ใช้</td></tr>
               )}
             </tbody>
           </table>
@@ -169,9 +169,9 @@ export default function UserManagement() {
         {/* Footer */}
         <div className="mt-6 flex items-center justify-between gap-4 text-sm">
           <div className="opacity-70">
-            Showing <span className="font-semibold">{filteredUsers.length ? startIdx + 1 : 0}</span>
+            กำลังเเสดง <span className="font-semibold">{filteredUsers.length ? startIdx + 1 : 0}</span>
             –<span className="font-semibold">{Math.min(endIdx, filteredUsers.length)}</span>
-            &nbsp;of&nbsp;<span className="font-semibold">{filteredUsers.length}</span>
+            &nbsp;จาก&nbsp;<span className="font-semibold">{filteredUsers.length}</span>
           </div>
           <div className="flex items-center gap-2">
             <button className="btn btn-ghost btn-sm" onClick={() => goto(page - 1)} disabled={page === 1}>{"<"}</button>
@@ -181,7 +181,7 @@ export default function UserManagement() {
             <button className="btn btn-ghost btn-sm" onClick={() => goto(page + 1)} disabled={page === totalPages}>{">"}</button>
           </div>
           <div className="flex items-center gap-2">
-            <label className="opacity-70">Rows per page</label>
+            <label className="opacity-70 whitespace-nowrap">จำนวนแถวต่อหน้า</label>
             <select className="select select-bordered select-sm" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
               {[5,10,15,20].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>

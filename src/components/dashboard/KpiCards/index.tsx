@@ -17,25 +17,25 @@ export default function KpiCards() {
 
   const kpiData = [
     {
-      title: "Total Sales",
+      title: "ยอดขายรวม",
       subtitle: dateRange,
       value: "$12,450.54",
       change: "+29.7%",
     },
     {
-      title: "Total Orders Today",
+      title: "ยอดคำสั่งซื้อวันนี้",
       subtitle: todayFormatted,
       value: "650",
       change: "+30.1%",
     },
     {
-      title: "Total Sales Today",
+      title: "ยอดขายวันนี้",
       subtitle: todayFormatted,
       value: "95",
       change: "+25.3%",
     },
     {
-      title: "Total stock",
+      title: "สต๊อกทั้งหมด",
       subtitle: dateRange,
       value: "10",
       change: "-10.2%",

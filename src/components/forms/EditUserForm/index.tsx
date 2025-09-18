@@ -42,8 +42,8 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
   return (
     <dialog id="edit_user_modal" className={`modal ${isOpen ? 'modal-open' : ''}`}>
       <div className="modal-box">
-        <h3 className="font-bold text-lg">Edit User</h3>
-        <p className="py-2 text-sm opacity-70">Update user details for {user?.first_name} {user?.last_name}.</p>
+        <h3 className="font-bold text-lg">เเก้ไขผู้ใช้</h3>
+        <p className="py-2 text-sm opacity-70">แก้ไขข้อมูลผู้ใช้สำหรับ {user?.first_name} {user?.last_name}.</p>
         
         <form onSubmit={handleSubmit}>
           <div className="form-control grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -51,7 +51,7 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
             {/* Prefix */}
             <label className="form-control w-full">
               <div className="label">
-                <span className="label-text">Prefix</span>
+                <span className="label-text">คำนำหน้า</span>
               </div>
               <select
                 name="prefix_id"
@@ -68,7 +68,7 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
             {/* Role */}
              <label className="form-control w-full">
               <div className="label">
-                <span className="label-text">Role</span>
+                <span className="label-text">ตำเเหน่ง</span>
               </div>
               <select
                 name="role_id"
@@ -85,7 +85,7 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
             {/* First Name */}
             <label className="form-control w-full">
               <div className="label">
-                <span className="label-text">First Name</span>
+                <span className="label-text">ชื่อ</span>
               </div>
               <input
                 type="text"
@@ -100,7 +100,7 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
             {/* Last Name */}
             <label className="form-control w-full">
               <div className="label">
-                <span className="label-text">Last Name</span>
+                <span className="label-text">นามสกุล</span>
               </div>
               <input
                 type="text"
@@ -115,7 +115,7 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
              {/* Username */}
              <label className="form-control w-full md:col-span-2">
               <div className="label">
-                <span className="label-text">Username</span>
+                <span className="label-text">ชื่อผู้ใช้</span>
               </div>
               <input
                 type="text"
@@ -130,8 +130,8 @@ export default function EditUserForm({ user, isOpen, onClose, onSave }: EditUser
 
           {/* Modal Actions */}
           <div className="modal-action mt-6">
-             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-success text-white">Save Changes</button>
+             <button type="button" className="btn btn-ghost" onClick={onClose}>ยกเลิก</button>
+            <button type="submit" className="btn btn-success text-white">บันทึกการเปลี่ยนแปลง</button>
           </div>
         </form>
       </div>

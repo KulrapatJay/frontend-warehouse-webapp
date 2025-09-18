@@ -26,15 +26,15 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", Icon: MdOutlineDashboard },
-  { href: "/reports", label: "Reports", Icon: TbReportSearch },
+  { href: "/dashboard", label: "เเดชบอร์ด", Icon: MdOutlineDashboard },
+  { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
 ];
 
 // <-- 1. สร้าง Array สำหรับลิงก์ Warehouse เพื่อให้จัดการง่าย
 const WAREHOUSE_LINKS = [
-  { href: "/warehouse/1", label: "Warehouse 1" },
-  { href: "/warehouse/2", label: "Warehouse 2" },
-  { href: "/warehouse/3", label: "Warehouse 3" },
+  { href: "/warehouse/1", label: "คลังสินค้า 1" },
+  { href: "/warehouse/2", label: "คลังสินค้า 2" },
+  { href: "/warehouse/3", label: "คลังสินค้า 3" },
 ];
 
 export default function Sidebar() {
@@ -135,7 +135,7 @@ export default function Sidebar() {
             >
               <div className="flex items-center">
                 <GoHome size={20} className="flex-shrink-0" aria-hidden />
-                {!isCollapsed && <span className="ml-3">Warehouse</span>}
+                {!isCollapsed && <span className="ml-3">คลังสินค้า</span>}
               </div>
               {!isCollapsed && (
                 <FiChevronDown
@@ -180,7 +180,7 @@ export default function Sidebar() {
               className="flex-shrink-0"
               aria-hidden
             />
-            {!isCollapsed && <span className="ml-3">User management</span>}
+            {!isCollapsed && <span className="ml-3">จัดการผู้ใช้</span>}
           </Link>
           <Link
             href="/product_management"
@@ -197,7 +197,7 @@ export default function Sidebar() {
               className="flex-shrink-0"
               aria-hidden
             />
-            {!isCollapsed && <span className="ml-3">Product management</span>}
+            {!isCollapsed && <span className="ml-3">จัดการสินค้า</span>}
           </Link>
         </nav>
 
@@ -288,7 +288,7 @@ export default function Sidebar() {
             className="flex items-center w-full p-2 rounded-lg hover:bg-base-200 text-error active:opacity-80 transition-colors duration-150"
           >
             <FiLogOut size={20} className="flex-shrink-0" aria-hidden />
-            {!isCollapsed && <span className="ml-3 font-medium">Logout</span>}
+            {!isCollapsed && <span className="ml-3 font-medium">ออกจากระบบ</span>}
           </button>
         </div>
       </div>

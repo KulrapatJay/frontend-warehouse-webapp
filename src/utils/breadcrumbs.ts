@@ -9,40 +9,48 @@ type RouteConfig = {
 export const ROUTES: RouteConfig[] = [
   {
     pattern: "/dashboard",
-    crumbs: () => [{ label: "Dashboard" }],
+    crumbs: () => [{ label: "แดชบอร์ด" }],
   },
   {
     pattern: "/reports",
-    crumbs: () => [{ label: "Reports" }],
+    crumbs: () => [{ label: "รายงาน" }],
   },
   {
     pattern: "/warehouse/[id]",
     crumbs: (params) => [
-      { label: "Warehouse" },
+      { label: "คลังสินค้า" },
       { label: params.id },
     ],
   },
   {
     pattern: "/user_management",
-    crumbs: () => [{ label: "User management", href: "/user_management" }],
+    crumbs: () => [{ label: "จัดการผู้ใช้", href: "/user_management" }],
   },
   {
     pattern: "/user_management/add_user",
     crumbs: () => [
-      { label: "User management", href: "/user_management" },
-      { label: "Add user" },
+      { label: "จัดการผู้ใช้", href: "/user_management" },
+      { label: "เพิ่มผู้ใช้" },
     ],
   },
   {
     pattern: "/product_management/add_product",
     crumbs: () => [
-      { label: "Product management", href: "/product_management" },
-      { label: "Add product" },
+      { label: "จัดการสินค้า", href: "/product_management" },
+      { label: "เพิ่มสินค้า" },
     ],
   },
     {
     pattern: "/product_management",
-    crumbs: () => [{ label: "Product management", href: "/product_management" }],
+    crumbs: () => [{ label: "จัดการสินค้า", href: "/product_management" }],
+  },
+  {
+    pattern: "/product_management/edit_product/[id]",
+    crumbs: (params) => [
+      { label: "จัดการสินค้า", href: "/product_management" },
+      { label: "เเก้ไขสินค้า",href: "/product_management"},
+      { label: params.id },
+    ],
   },
 ];
 

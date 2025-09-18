@@ -57,12 +57,12 @@ export default function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ใช้</label>
           <Input
             {...register("username")}
             id="username"
             type="text"
-            placeholder="Username or EmployeeId"
+            placeholder="ชื่อผู้ใช้ หรือ รหัสพนักงาน"
           />
           {errors.username && (
             <p className="text-red-500 text-sm mt-1">
@@ -72,13 +72,13 @@ export default function LoginForm() {
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
           <div className="relative">
             <Input
               {...register("password")}
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Your Password"
+              placeholder="รหัสผ่านของคุณ"
             />
             <button
               type="button"
@@ -102,7 +102,7 @@ export default function LoginForm() {
           disabled={isSubmitting}
           className="w-full !mt-4"
         >
-          {isSubmitting ? "Logging in..." : "Log In"}
+          {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
         </Button>
       </form>
     </motion.div>

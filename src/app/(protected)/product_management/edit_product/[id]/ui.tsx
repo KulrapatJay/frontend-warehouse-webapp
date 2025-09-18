@@ -151,7 +151,7 @@ export default function EditProductClient({ id }: { id: string }) {
       <div className="mb-6 pb-4 border-b">
         <div>
           <h1 className="text-2xl font-bold">แก้ไขสินค้า</h1>
-          <p className="text-sm opacity-70">ID: {id}</p>
+          <p className="text-sm opacity-70">รหัสสินค้า: {id}</p>
         </div>
       </div>
 
@@ -248,7 +248,7 @@ export default function EditProductClient({ id }: { id: string }) {
                         required: "กรุณาเลือกประเภท",
                       })}
                     >
-                      {["Bakery", "Pastry", "Beverage", "Snack"].map((c) => (
+                      {["เบเกอรี่", "เพสทรี", "เครื่องดื่ม", "ของว่าง"].map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
@@ -329,7 +329,7 @@ export default function EditProductClient({ id }: { id: string }) {
                   </h3>
                   <label className="form-control">
                     <div className="label">
-                      <span className="label-text">Barcode</span>
+                      <span className="label-text">บาร์โค้ด</span>
                     </div>
                     <input
                       className="input input-bordered"

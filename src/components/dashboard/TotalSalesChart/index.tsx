@@ -29,7 +29,7 @@ ChartJS.register(
   Title
 );
 
-const labels = ["Jan", "Feb", "Mar", "Apr", "May"];
+const labels = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม"];
 const rawData = [12000, 9500, 18500, 11000, 25000];
 
 export default function TotalSalesChart() {
@@ -108,11 +108,11 @@ export default function TotalSalesChart() {
     <div className="card bg-base-100 border border-base-300 h-full">
       <div className="card-body p-5 flex flex-col">
         <div className="flex items-center justify-between">
-          <h3 className="card-title text-base">Total Sales</h3>
+          <h3 className="card-title text-base">ยอดขายรวม</h3>
           <div className="join">
-            <button className="btn btn-xs join-item">Week</button>
-            <button className="btn btn-xs join-item btn-active">Month</button>
-            <button className="btn btn-xs join-item">Year</button>
+            <button className="btn btn-xs join-item">สัปดาห์</button>
+            <button className="btn btn-xs join-item btn-active">เดือน</button>
+            <button className="btn btn-xs join-item">ปี</button>
           </div>
         </div>
         <div className="mt-2 text-sm">
