@@ -26,7 +26,7 @@ const DEMO_DATA: Product[] = [
     id: "p01",
     code: "abc1111",
     name: "เค้กช็อกโกแลต",
-    category: "Bakery",
+    category: "เบเกอรี่",
     price: 100,
     qty: 300,
     unit: "ชิ้น",
@@ -38,7 +38,7 @@ const DEMO_DATA: Product[] = [
     id: "p02",
     code: "abc2222",
     name: "ขนมปังกระเทียม",
-    category: "Bakery",
+    category: "เบเกอรี่",
     price: 150,
     qty: 200,
     unit: "ชิ้น",
@@ -50,7 +50,7 @@ const DEMO_DATA: Product[] = [
     id: "p03",
     code: "abc3333",
     name: "ครัวซองต์",
-    category: "Pastry",
+    category: "เพสทรี",
     price: 150,
     qty: 251,
     unit: "ชิ้น",
@@ -129,7 +129,7 @@ export default function ProductManagement() {
         {/* Header row: left count, right controls */}
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm opacity-70">
-            All products{" "}
+            สินค้าทั้งหมด{" "}
             <span className="font-semibold opacity-100">
               {filteredList.length}
             </span>
@@ -137,7 +137,7 @@ export default function ProductManagement() {
           <div className="flex items-center gap-2">
             <input
               type="text"
-              placeholder="Search by name...."
+              placeholder="ค้นหาจากชื่อ...."
               className="input input-bordered w-64"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -149,7 +149,7 @@ export default function ProductManagement() {
             >
               {categories.map((c) => (
                 <option key={c} value={c}>
-                  {c === "all" ? "All categories" : c}
+                  {c === "all" ? "หมวดหมู่ทั้งหมด" : c}
                 </option>
               ))}
             </select>
@@ -162,7 +162,7 @@ export default function ProductManagement() {
                 }`}
               >
                 <FaPlus />
-                Add New Product
+                เพิ่มสินค้าใหม่
               </button>
             </Link>
           </div>
@@ -224,7 +224,7 @@ export default function ProductManagement() {
                         className="btn btn-sm"
                         onClick={() => alert(p.barcode || "ไม่มีบาร์โค้ด")}
                       >
-                        <CiBarcode className="mr-1 text-xl" /> Barcode
+                        <CiBarcode className="mr-1 text-xl" /> บาร์โค้ด
                       </button>
                       <button
                         className="btn btn-sm btn-success"
@@ -234,13 +234,13 @@ export default function ProductManagement() {
                           )
                         }
                       >
-                        <MdOutlineModeEditOutline className="mr-1" /> Edit
+                        <MdOutlineModeEditOutline className="mr-1" /> เเก้ไข
                       </button>
                       <button
                         className="btn btn-sm btn-error"
                         onClick={() => setRemoving(p)}
                       >
-                        <MdOutlineDelete className="mr-1" /> Delete
+                        <MdOutlineDelete className="mr-1" /> ลบ
                       </button>
                     </div>
                   </td>
@@ -249,7 +249,7 @@ export default function ProductManagement() {
               {paged.length === 0 && (
                 <tr>
                   <td colSpan={9} className="p-6 text-center opacity-70">
-                    No products found
+                    ไม่พบสินค้า
                   </td>
                 </tr>
               )}
@@ -260,7 +260,7 @@ export default function ProductManagement() {
         {/* Footer (pagination + rows-per-page) */}
         <div className="mt-6 flex items-center justify-between gap-4 text-sm">
           <div className="opacity-70">
-            Showing{" "}
+            กำลังเเสดง{" "}
             <span className="font-semibold">
               {filteredList.length ? startIdx + 1 : 0}
             </span>
@@ -268,7 +268,7 @@ export default function ProductManagement() {
             <span className="font-semibold">
               {Math.min(endIdx, filteredList.length)}
             </span>
-            &nbsp;of&nbsp;
+            &nbsp;จาก&nbsp;
             <span className="font-semibold">{filteredList.length}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export default function ProductManagement() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <label className="opacity-70">Rows per page</label>
+            <label className="opacity-70 whitespace-nowrap">จำนวนแถวต่อหน้า</label>
             <select
               className="select select-bordered select-sm"
               value={pageSize}

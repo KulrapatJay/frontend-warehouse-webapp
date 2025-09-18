@@ -45,12 +45,12 @@ export default function AddUserPage() {
   return (
     <div className="max-w-2xl mx-auto w-full">
       <div className="bg-base-100 rounded-lg shadow-xl p-8">
-        <h1 className="text-3xl font-bold mb-6 text-center">Add new user</h1>
+        <h1 className="text-3xl font-bold mb-6 text-center">เพิ่มผู้ใช้ใหม่</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Prefix */}
           <label className="form-control">
-            <span className="label-text font-medium">Prefix</span>
+            <span className="label-text font-medium">คำนำหน้า</span>
             <select className="select select-bordered w-full" {...register("prefix_id")}>
               {Prefix.map((p: { id: number; name?: string; prefix_name?: string }) => (
                 <option key={p.id} value={p.id}>{p.name ?? p.prefix_name}</option>
@@ -61,12 +61,12 @@ export default function AddUserPage() {
           {/* First & Last name */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <label className="form-control">
-              <span className="label-text font-medium">First name</span>
+              <span className="label-text font-medium">ชื่อ</span>
               <input className="input input-bordered w-full" {...register("first_name")} />
               {errors.first_name && <span className="text-error text-xs mt-1">{errors.first_name.message}</span>}
             </label>
             <label className="form-control">
-              <span className="label-text font-medium">Last name</span>
+              <span className="label-text font-medium">นามสกุล</span>
               <input className="input input-bordered w-full" {...register("last_name")} />
               {errors.last_name && <span className="text-error text-xs mt-1">{errors.last_name.message}</span>}
             </label>
@@ -74,7 +74,7 @@ export default function AddUserPage() {
 
           {/* Role */}
           <label className="form-control">
-            <span className="label-text font-medium">Role</span>
+            <span className="label-text font-medium">ตำเเหน่ง</span>
             <select className="select select-bordered w-full" {...register("role_id")}>
               {Role.map((r: { id: number; role_name: string }) => (
                 <option key={r.id} value={r.id}>{r.role_name}</option>
@@ -85,12 +85,12 @@ export default function AddUserPage() {
           {/* Username & Password */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <label className="form-control">
-              <span className="label-text font-medium">Username</span>
+              <span className="label-text font-medium">ชื่อผู้ใช้</span>
               <input className="input input-bordered w-full" {...register("username")} />
               {errors.username && <span className="text-error text-xs mt-1">{errors.username.message}</span>}
             </label>
             <label className="form-control">
-              <span className="label-text font-medium">Password</span>
+              <span className="label-text font-medium">รหัสผ่าน</span>
               <input type="password" className="input input-bordered w-full" {...register("password")} />
               {errors.password && <span className="text-error text-xs mt-1">{errors.password.message}</span>}
             </label>
@@ -100,17 +100,17 @@ export default function AddUserPage() {
           <div>
             <label className="label cursor-pointer justify-start gap-3">
               <input type="checkbox" className="checkbox checkbox-primary" {...register("is_active")} />
-              <span className="label-text text-base">Active</span>
+              <span className="label-text text-base">กำลังใช้งาน</span>
             </label>
           </div>
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" className="btn btn-ghost" onClick={() => router.push("/user_management")}>
-              Cancel
+              ยกเลิก
             </button>
             <button className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? <span className="loading loading-spinner" /> : "Save"}
+              {isSubmitting ? <span className="loading loading-spinner" /> : "บันทึก"}
             </button>
           </div>
         </form>

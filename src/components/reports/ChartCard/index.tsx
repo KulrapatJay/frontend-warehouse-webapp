@@ -13,7 +13,7 @@ function ChartCard({
 }: {
   title: string;
   amount: string;
-  badge: "Month" | "Day";
+  badge: "เดือน" | "สัปดาห์";
   children: React.ReactNode;
   change?: string;
   down?: boolean;

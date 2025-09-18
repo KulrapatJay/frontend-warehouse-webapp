@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { FiChevronDown } from "react-icons/fi";
 
 const MOCK_PRODUCT_DATA = {
-  "This Month": {
+  "เดือนนี้": {
     total: "$21,000",
     change: "+25.2%",
     products: [
@@ -15,7 +15,7 @@ const MOCK_PRODUCT_DATA = {
       { name: "พาย", pct: 16, color: "bg-yellow-500" },
     ],
   },
-  "Last Month": {
+  "เดือนล่าสุด": {
     total: "$18,500",
     change: "+15.8%",
     products: [
@@ -24,7 +24,7 @@ const MOCK_PRODUCT_DATA = {
       { name: "ครัวซอง", pct: 20, color: "bg-green-500" },
     ],
   },
-  "June": {
+  "มิถุนายน": {
     total: "$15,200",
     change: "+11.1%",
     products: [
@@ -36,7 +36,7 @@ const MOCK_PRODUCT_DATA = {
 };
 
 export default function TopProductsChart() {
-  const [selectedMonth, setSelectedMonth] = useState<keyof typeof MOCK_PRODUCT_DATA>("This Month");
+  const [selectedMonth, setSelectedMonth] = useState<keyof typeof MOCK_PRODUCT_DATA>("เดือนนี้");
   const [productData, setProductData] = useState(MOCK_PRODUCT_DATA[selectedMonth]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function TopProductsChart() {
       <div className="card-body p-5">
         {/* Header with Dropdown */}
         <div className="flex items-center justify-between">
-          <h3 className="card-title text-base">Top Selling Products</h3>
+          <h3 className="card-title text-base">สินค้าขายดีที่สุด</h3>
           <div className="dropdown dropdown-end">
             <summary tabIndex={0} role="button" className="btn btn-ghost btn-xs">
               {selectedMonth} <FiChevronDown />
