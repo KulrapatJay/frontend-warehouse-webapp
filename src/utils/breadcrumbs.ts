@@ -23,6 +23,10 @@ export const ROUTES: RouteConfig[] = [
     ],
   },
   {
+    pattern: "/staff",
+    crumbs: () => [{ label: "เจ้าหน้าที่" }],
+  },
+  {
     pattern: "/user_management",
     crumbs: () => [{ label: "จัดการผู้ใช้", href: "/user_management" }],
   },

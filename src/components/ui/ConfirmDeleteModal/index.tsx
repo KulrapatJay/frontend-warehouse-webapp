@@ -56,13 +56,13 @@ export default function ConfirmDeleteModal({
             onClick={onClose}
             disabled={loading}
           >
-            Cancel
+            ยกเลิก
           </button>
           <button
             className={`btn btn-error text-white ${loading ? "btn-disabled" : ""}`}
             onClick={handleConfirm}
           >
-            {loading ? <span className="loading loading-spinner" /> : "Delete"}
+            {loading ? <span className="loading loading-spinner" /> : "ยืนยันลบ"}
           </button>
         </div>
       </div>

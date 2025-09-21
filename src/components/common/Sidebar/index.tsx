@@ -12,8 +12,9 @@ import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
-import { TbReportSearch } from "react-icons/tb";
+import { TbReportSearch } from "react-icons/tb"; 
 import { LuCircleUserRound } from "react-icons/lu";
+import { PiUsers } from "react-icons/pi"; // 1. เพิ่ม import สำหรับไอคอนใหม่
 
 type NavItem = {
   href: string;
@@ -30,7 +31,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
 ];
 
-// <-- 1. สร้าง Array สำหรับลิงก์ Warehouse เพื่อให้จัดการง่าย
 const WAREHOUSE_LINKS = [
   { href: "/warehouse/1", label: "คลังสินค้า 1" },
   { href: "/warehouse/2", label: "คลังสินค้า 2" },
@@ -58,7 +58,6 @@ export default function Sidebar() {
     router.push("/login");
   }, [logout, router]);
 
-  // เช็คแล้วค่อย toggle — กันการสลับซ้ำโดยไม่จำเป็น
   const handleThemeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const wantDark = e.target.checked;
@@ -155,7 +154,7 @@ export default function Sidebar() {
                     aria-current={pathname === link.href ? "page" : undefined}
                     className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
           ${pathname === link.href
-                        ? "bg-primary/10 text-primary font-medium" // <-- ทำให้สไตล์เหมือนเมนูหลัก
+                        ? "bg-primary/10 text-primary font-medium"
                         : ""
                       }
           `}
@@ -166,6 +165,27 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+          
+          {/* ========== START: ส่วนที่แก้ไข ========== */}
+          <Link
+            href="/staff"
+            aria-current={pathname === "/staff" ? "page" : undefined}
+            className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+            ${
+              pathname === "/staff"
+                ? "bg-primary/10 text-primary font-medium"
+                : ""
+            }`}
+          >
+            <PiUsers
+              size={20}
+              className="flex-shrink-0"
+              aria-hidden
+            />
+            {!isCollapsed && <span className="ml-3">เจ้าหน้าที่</span>}
+          </Link>
+          {/* ========== END: ส่วนที่แก้ไข ========== */}
+
           <Link
             href="/user_management"
             aria-current={pathname === "/user_management" ? "page" : undefined}

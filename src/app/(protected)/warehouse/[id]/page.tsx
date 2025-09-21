@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-// --- (ส่วนของข้อมูลจำลอง และ Types) ---
+// --- (ส่วนของข้อมูลจำลอง และ Types เหมือนเดิมทั้งหมด) ---
 type Product = {
   id: number;
   productCode: string; // รหัสสินค้าหลัก
@@ -11,12 +11,12 @@ type Product = {
   name: string;
   category: string;
   quantity: number;
+  unit: string; // << เพิ่ม field นี้สำหรับหน่วยนับ
   status: 'มีสินค้า' | 'สินค้าใกล้หมด' | 'สินค้าหมด';
   responsible: string;
   lastUpdated: string;
 };
 
-// ## เพิ่ม dailyInbound ใน Type ##
 type WarehouseData = {
   name: string;
   stats: {
@@ -27,35 +27,34 @@ type WarehouseData = {
   products: Product[];
 };
 
-// ## อัปเดตข้อมูลตัวอย่างให้มี dailyInbound ##
 const allWarehouseData: { [key: string]: WarehouseData } = {
   '1': {
     name: 'Warehouse 1',
     stats: { totalInbound: 850, totalOutbound: 620, dailyInbound: 55 },
     products: [
-      { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2025-09-01' },
-      { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-02' },
-      { id: 3, productCode: 'BK-DAN', skuCode: 'BK-DAN-01', name: 'เดนิชผลไม้รวม', category: 'Pastry', quantity: 9, status: 'สินค้าใกล้หมด', responsible: 'สมชาย', lastUpdated: '2025-09-03' },
+      { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2025-09-01' },
+      { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-02' },
+      { id: 3, productCode: 'BK-DAN', skuCode: 'BK-DAN-01', name: 'เดนิชผลไม้รวม', category: 'Pastry', quantity: 9, unit: 'ชิ้น', status: 'สินค้าใกล้หมด', responsible: 'สมชาย', lastUpdated: '2025-09-03' },
     ],
   },
   '2': {
     name: 'Warehouse 2',
     stats: { totalInbound: 210, totalOutbound: 185, dailyInbound: 15 },
     products: [
-      { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2025-09-01' },
-      { id: 5, productCode: 'PI-APL', skuCode: 'PI-APL-01', name: 'พายแอปเปิ้ล', category: 'Pie', quantity: 5, status: 'สินค้าใกล้หมด', responsible: 'วิชัย', lastUpdated: '2025-08-28' },
-      { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-04' },
-      { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2025-08-20' },
+      { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2025-09-01' },
+      { id: 5, productCode: 'PI-APL', skuCode: 'PI-APL-01', name: 'พายแอปเปิ้ล', category: 'Pie', quantity: 5, unit: 'ชิ้น', status: 'สินค้าใกล้หมด', responsible: 'วิชัย', lastUpdated: '2025-08-28' },
+      { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-04' },
+      { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2025-08-20' },
     ],
   },
   '3': {
     name: 'Warehouse 3',
     stats: { totalInbound: 5500, totalOutbound: 4800, dailyInbound: 320 },
     products: [
-      { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
-      { id: 9, productCode: 'RM-YST', skuCode: 'RM-YST-01', name: 'ยีสต์ (ซอง)', category: 'Ingredient', quantity: 1500, status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
-      { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 45, status: 'มีสินค้า', responsible: 'มานี', lastUpdated: '2025-09-03' },
-      { id: 11, productCode: 'RM-BLB', skuCode: 'RM-BLB-01', name: 'บลูเบอร์รีแช่แข็ง (kg)', category: 'Fruit', quantity: 15, status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2025-09-02' },
+      { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
+      { id: 9, productCode: 'RM-YST', skuCode: 'RM-YST-01', name: 'ยีสต์', category: 'Ingredient', quantity: 1500, unit: 'ซอง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
+      { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส', category: 'Dairy', quantity: 45, unit: 'kg', status: 'มีสินค้า', responsible: 'มานี', lastUpdated: '2025-09-03' },
+      { id: 11, productCode: 'RM-BLB', skuCode: 'RM-BLB-01', name: 'บลูเบอร์รีแช่แข็ง', category: 'Fruit', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2025-09-02' },
     ],
   },
 };
@@ -120,8 +119,10 @@ export default function WarehousePage({ params }: WarehousePageProps) {
   }
 
   return (
-    <main className="p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto">
+    // แก้ไข: ลบ p-4 sm:p-8 ออก
+    <main>
+      {/* แก้ไข: ลบ max-w-7xl mx-auto ออก */}
+      <div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Card: สินค้าเข้ารวันนี้ */}
@@ -176,19 +177,23 @@ export default function WarehousePage({ params }: WarehousePageProps) {
 
             <div className="overflow-x-auto">
               <table className="table w-full">
+                {/* --- START: ส่วนที่แก้ไข Table Header --- */}
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
                   <tr>
                     <th className="p-4">รหัสสินค้า</th>
                     <th className="p-4">รหัส SKU</th>
                     <th className="p-4">ชื่อสินค้า</th>
                     <th className="p-4">ประเภท</th>
-                    <th className="p-4 text-right">จำนวน (ชิ้น)</th>
+                    <th className="p-4 text-right">จำนวน</th>
+                    <th className="p-4">หน่วยนับ</th>
                     <th className="p-4 text-center">สถานะ</th>
                     <th className="p-4">ผู้รับผิดชอบ</th>
                     <th className="p-4">วันที่</th>
                   </tr>
                 </thead>
+                {/* --- END: ส่วนที่แก้ไข Table Header --- */}
                 <tbody>
+                  {/* --- START: ส่วนที่แก้ไข Table Body --- */}
                   {filteredProducts.map((product) => (
                     <tr key={product.id} className="hover border-b">
                       <td className="p-4 font-mono">{product.productCode}</td>
@@ -196,6 +201,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
                       <td className="p-4">{product.name}</td>
                       <td className="p-4">{product.category}</td>
                       <td className="p-4 text-right">{product.quantity.toLocaleString()}</td>
+                      <td className="p-4">{product.unit}</td>
                       <td className="p-4 text-center">
                         <span className={`badge w-28 justify-center ${getStatusBadgeClass(product.status)}`}>
                           {product.status}
@@ -205,6 +211,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
                       <td className="p-4">{product.lastUpdated}</td>
                     </tr>
                   ))}
+                  {/* --- END: ส่วนที่แก้ไข Table Body --- */}
                 </tbody>
               </table>
             </div>
