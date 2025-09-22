@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FaPlus } from 'react-icons/fa';
+import Link from 'next/link'; // 1. Import Link จาก next/link
 
 // --- Type Definitions ---
 type Product = {
@@ -37,7 +38,7 @@ const allWarehouseData: Record<string, WarehouseData> = {
     { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-04' },
     { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2025-08-20' },
   ]},
-  '3': { name: 'Warehouse 3', dailyInbound: 250, totalOutbound: 0, products: [
+  '3': { name: 'Warehouse 3', dailyInbound: 20, totalOutbound: 0, products: [
     { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
     { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2025-09-03' },
   ]},
@@ -46,7 +47,7 @@ const allWarehouseData: Record<string, WarehouseData> = {
 const allProducts: Product[] = Object.values(allWarehouseData).flatMap((data) =>
   data.products.map((product) => ({
     ...product,
-    warehouse: data.name, 
+    warehouse: data.name,
   }))
 );
 
@@ -83,6 +84,11 @@ export default function StaffAllProductsPage() {
   const [selectedWarehouse, setSelectedWarehouse] = useState('all');
   const { theme } = useTheme();
 
+  // --- Pagination State ---
+  const [page, setPage] = useState(1);
+  const pageSizeOptions = [5, 10, 15, 20];
+  const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
+
   // --- Calculations ---
   const dailyInbound = Object.values(allWarehouseData).reduce((sum, wh) => sum + wh.dailyInbound, 0);
   const totalProducts = Object.values(allWarehouseData).reduce((sum, wh) => sum + wh.products.length, 0);
@@ -95,10 +101,31 @@ export default function StaffAllProductsPage() {
   }, []);
   const warehouseOptions = ['all', 'Warehouse 1', 'Warehouse 2', 'Warehouse 3'];
   const filteredProducts = useMemo(
-    () => filterProducts(allProducts, searchTerm, selectedCategory, selectedWarehouse), 
+    () => filterProducts(allProducts, searchTerm, selectedCategory, selectedWarehouse),
     [searchTerm, selectedCategory, selectedWarehouse]
   );
 
+  // --- Pagination Logic ---
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, selectedCategory, selectedWarehouse, pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+  
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const paginatedProducts = filteredProducts.slice(startIdx, endIdx);
+
+  const goto = (p: number) => {
+    setPage(Math.min(Math.max(1, p), totalPages));
+  };
+  
   const today = new Date();
   const formattedDate = new Intl.DateTimeFormat('th-TH', {
     day: 'numeric',
@@ -109,45 +136,12 @@ export default function StaffAllProductsPage() {
   return (
     <main>
       <div>
-        {/* ========== START: KPI Cards Section (แก้ไขใหม่ทั้งหมด) ========== */}
+        {/* KPI Cards Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Card: สินค้าเข้า */}
-          <div className="stats bg-base-100 shadow">
-            <div className="stat">
-              <div className="stat-title">สินค้าเข้า</div>
-              <div className="stat-value text-info">{dailyInbound.toLocaleString()}</div>
-              <div className="stat-desc flex justify-between">
-                <span>ชิ้น</span>
-                <span>{formattedDate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card: สินค้าทั้งหมด */}
-          <div className="stats bg-base-100 shadow">
-            <div className="stat">
-              <div className="stat-title">สินค้าทั้งหมด</div>
-              <div className="stat-value text-success">{totalProducts.toLocaleString()}</div>
-              <div className="stat-desc flex justify-between">
-                <span>ชิ้น</span>
-                <span>{formattedDate}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card: สินค้าออก */}
-          <div className="stats bg-base-100 shadow">
-            <div className="stat">
-              <div className="stat-title">สินค้าออก</div>
-              <div className="stat-value text-error">{totalOutbound.toLocaleString()}</div>
-              <div className="stat-desc flex justify-between">
-                <span>ชิ้น</span>
-                <span>{formattedDate}</span>
-              </div>
-            </div>
-          </div>
+            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าเข้า</div><div className="stat-value text-info">{dailyInbound.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
+            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าทั้งหมด</div><div className="stat-value text-success">{totalProducts.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
+            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าออก</div><div className="stat-value text-error">{totalOutbound.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
         </div>
-        {/* ========== END: KPI Cards Section ========== */}
 
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
@@ -160,45 +154,20 @@ export default function StaffAllProductsPage() {
                 </span>
               </span>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  placeholder="ค้นหา..."
-                  className="input input-bordered w-64"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <select
-                  className="select select-bordered"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c === "all" ? "หมวดหมู่ทั้งหมด" : c}
-                    </option>
-                  ))}
+                <input type="text" placeholder="ค้นหา..." className="input input-bordered w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <select className="select select-bordered" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                  {categories.map((c) => (<option key={c} value={c}>{c === "all" ? "หมวดหมู่ทั้งหมด" : c}</option>))}
                 </select>
-                <select
-                  className="select select-bordered"
-                  value={selectedWarehouse}
-                  onChange={(e) => setSelectedWarehouse(e.target.value)}
-                >
-                   {warehouseOptions.map((w) => (
-                    <option key={w} value={w}>
-                      {w === "all" ? "คลังทั้งหมด" : w}
-                    </option>
-                  ))}
+                <select className="select select-bordered" value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}>
+                   {warehouseOptions.map((w) => (<option key={w} value={w}>{w === "all" ? "คลังทั้งหมด" : w}</option>))}
                 </select>
-                <button
-                  className={`btn rounded-md text-white transition whitespace-nowrap ${
-                    theme === 'dark'
-                      ? 'bg-blue-600 hover:bg-blue-700'
-                      : 'bg-black hover:bg-gray-800'
-                  }`}
-                >
+                
+                {/* 2. เปลี่ยน <button> เป็น <Link> และกำหนด href */}
+                <Link href="/staff/warehouse_management" className={`btn rounded-md text-white transition whitespace-nowrap ${ theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800' }`}>
                     <FaPlus className="h-4 w-4" />
                     เพิ่มรายการ
-                </button>
+                </Link>
+
               </div>
             </div>
 
@@ -207,31 +176,13 @@ export default function StaffAllProductsPage() {
               <table className="table w-full">
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
                   <tr>
-                    <th className="p-4">รหัสสินค้า</th>
-                    <th className="p-4">ชื่อสินค้า</th>
-                    <th className="p-4">หมวดหมู่</th>
-                    <th className="p-4 text-right">จำนวน</th>
-                    <th className="p-4">หน่วย</th>
-                    <th className="p-4">คลังสินค้า</th>
-                    <th className="p-4 text-center">สถานะ</th>
-                    <th className="p-4">อัปเดตล่าสุด</th>
+                    <th className="p-4">รหัสสินค้า</th><th className="p-4">ชื่อสินค้า</th><th className="p-4">หมวดหมู่</th><th className="p-4 text-right">จำนวน</th><th className="p-4">หน่วย</th><th className="p-4">คลังสินค้า</th><th className="p-4 text-center">สถานะ</th><th className="p-4">อัปเดตล่าสุด</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((p) => (
+                  {paginatedProducts.map((p) => (
                     <tr key={p.id} className="hover border-b">
-                      <td className="p-4 font-mono">{p.productCode}</td>
-                      <td className="p-4">{p.name}</td>
-                      <td className="p-4">{p.category}</td>
-                      <td className="p-4 text-right">{p.quantity.toLocaleString()}</td>
-                      <td className="p-4">{p.unit}</td>
-                      <td className="p-4">{p.warehouse}</td>
-                      <td className="p-4 text-center">
-                        <span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>
-                          {p.status}
-                        </span>
-                      </td>
-                      <td className="p-4">{p.lastUpdated}</td>
+                      <td className="p-4 font-mono">{p.productCode}</td><td className="p-4">{p.name}</td><td className="p-4">{p.category}</td><td className="p-4 text-right">{p.quantity.toLocaleString()}</td><td className="p-4">{p.unit}</td><td className="p-4">{p.warehouse}</td><td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td><td className="p-4">{p.lastUpdated}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -242,6 +193,36 @@ export default function StaffAllProductsPage() {
                 </p>
               )}
             </div>
+
+            {/* Footer Section */}
+            {filteredProducts.length > 0 && (
+              <div className="mt-4 flex items-center justify-between text-sm">
+                {/* Status Display */}
+                <div className="opacity-70">
+                    กำลังเเสดง <span className="font-semibold">{startIdx + 1}</span>–<span className="font-semibold">{Math.min(endIdx, filteredProducts.length)}</span> จาก <span className="font-semibold">{filteredProducts.length}</span>
+                </div>
+                
+                {/* Page Buttons (always visible) */}
+                <div className="flex items-center gap-1">
+                    <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => goto(page - 1)}>&lt;</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button key={p} className={`btn btn-sm ${page === p ? 'btn-neutral' : 'btn-ghost'}`} onClick={() => goto(p)}>{p}</button>
+                    ))}
+                    <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => goto(page + 1)}>&gt;</button>
+                </div>
+                
+                {/* Page Size Selector */}
+                <div className="flex items-center gap-2">
+                    <span className="whitespace-nowrap opacity-70">จำนวนแถวต่อหน้า</span>
+                    <select className="select select-bordered select-sm" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
+                        {pageSizeOptions.map(size => (
+                            <option key={size} value={size}>{size}</option>
+                        ))}
+                    </select>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       </div>

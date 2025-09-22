@@ -27,6 +27,13 @@ export const ROUTES: RouteConfig[] = [
     crumbs: () => [{ label: "เจ้าหน้าที่" }],
   },
   {
+    pattern: "/staff/warehouse_management",
+    crumbs: () => [
+      { label: "เจ้าหน้าที่", href: "/warehouse_management" },
+      { label: "เพิ่มรายการ" },
+    ],
+  },
+  {
     pattern: "/user_management",
     crumbs: () => [{ label: "จัดการผู้ใช้", href: "/user_management" }],
   },
