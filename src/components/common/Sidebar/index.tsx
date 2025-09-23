@@ -40,7 +40,7 @@ const WAREHOUSE_LINKS = [
 // Staff
 const STAFF_LINKS = [
   { href: "/staff", label: "สินค้าทั้งหมด" },
-  
+  { href: "/staff/product-outbound", label: "สินค้าออก" },
 ];
 
 
