@@ -155,7 +155,7 @@ export default function ProductManagement() {
             </select>
             <Link href="/product_management/add_product">
               <button
-                className={`btn btn-primary rounded-md text-white transition ${
+                className={`btn btn-primary rounded-md text-white transition whitespace-nowrap ${/* <--- เพิ่ม whitespace-nowrap ตรงนี้ */
                   theme === "dark"
                     ? "bg-blue-600 hover:bg-blue-700"
                     : "bg-black hover:bg-gray-800"
@@ -212,7 +212,7 @@ export default function ProductManagement() {
                   <td className="p-3">
                     {new Date(p.date).toLocaleDateString("th-TH")}
                   </td>
-                  <td className="p-3">
+                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <button
                         className="btn btn-sm"
@@ -226,8 +226,10 @@ export default function ProductManagement() {
                       >
                         <CiBarcode className="mr-1 text-xl" /> บาร์โค้ด
                       </button>
+                      
+                      {/* ปุ่มแก้ไข: เพิ่ม text-white */}
                       <button
-                        className="btn btn-sm btn-success"
+                        className="btn btn-sm btn-success text-white" 
                         onClick={() =>
                           router.push(
                             `/product_management/edit_product/${p.id}`
@@ -236,8 +238,10 @@ export default function ProductManagement() {
                       >
                         <MdOutlineModeEditOutline className="mr-1" /> เเก้ไข
                       </button>
+
+                      {/* ปุ่มลบ: เพิ่ม text-white */}
                       <button
-                        className="btn btn-sm btn-error"
+                        className="btn btn-sm btn-error text-white"
                         onClick={() => setRemoving(p)}
                       >
                         <MdOutlineDelete className="mr-1" /> ลบ
@@ -393,7 +397,7 @@ export default function ProductManagement() {
               ยกเลิก
             </button>
             <button
-              className="btn btn-error"
+              className="btn btn-error text-white"
               onClick={() => {
                 if (!removing) return;
                 console.log("DELETE", removing.id);

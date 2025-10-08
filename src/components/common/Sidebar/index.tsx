@@ -14,6 +14,7 @@ import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
 import { TbReportSearch } from "react-icons/tb";
 import { LuCircleUserRound } from "react-icons/lu";
+import { PiUsers } from "react-icons/pi";
 
 type NavItem = {
   href: string;
@@ -30,23 +31,40 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
 ];
 
-// <-- 1. สร้าง Array สำหรับลิงก์ Warehouse เพื่อให้จัดการง่าย
 const WAREHOUSE_LINKS = [
   { href: "/warehouse/1", label: "คลังสินค้า 1" },
   { href: "/warehouse/2", label: "คลังสินค้า 2" },
   { href: "/warehouse/3", label: "คลังสินค้า 3" },
 ];
 
+// Staff
+const STAFF_LINKS = [
+  { href: "/staff", label: "สินค้าทั้งหมด" },
+  { href: "/staff/product-outbound", label: "สินค้าออก" },
+];
+
+
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-
   const router = useRouter();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
+
+  // Warehouse state
   const isWarehouseActive = pathname.startsWith('/warehouse');
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(isWarehouseActive);
+
+  // ========== START: ส่วนที่แก้ไข ==========
+  // Staff state
+  const isStaffActive = pathname.startsWith('/staff');
+  const [isStaffOpen, setIsStaffOpen] = useState(isStaffActive);
+
+  const onToggleStaff = useCallback(
+    () => setIsStaffOpen((v) => !v),
+    []
+  );
+  // ========== END: ส่วนที่แก้ไข ==========
 
   const onToggleSidebar = useCallback(() => setIsCollapsed((v) => !v), []);
   const onToggleWarehouse = useCallback(
@@ -58,7 +76,6 @@ export default function Sidebar() {
     router.push("/login");
   }, [logout, router]);
 
-  // เช็คแล้วค่อย toggle — กันการสลับซ้ำโดยไม่จำเป็น
   const handleThemeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const wantDark = e.target.checked;
@@ -125,11 +142,11 @@ export default function Sidebar() {
             <button
               onClick={onToggleWarehouse}
               className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
-    ${isWarehouseActive
+                ${isWarehouseActive
                   ? "bg-primary/10 text-primary font-medium"
                   : ""
                 }
-    `}
+              `}
               aria-expanded={isWarehouseOpen}
               aria-controls="warehouse-submenu"
             >
@@ -154,11 +171,11 @@ export default function Sidebar() {
                     href={link.href}
                     aria-current={pathname === link.href ? "page" : undefined}
                     className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
-          ${pathname === link.href
-                        ? "bg-primary/10 text-primary font-medium" // <-- ทำให้สไตล์เหมือนเมนูหลัก
+                      ${pathname === link.href
+                        ? "bg-primary/10 text-primary font-medium"
                         : ""
                       }
-          `}
+                    `}
                   >
                     {link.label}
                   </Link>
@@ -166,6 +183,57 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+
+          {/* ========== START: ส่วนที่แก้ไข ========== */}
+          {/* Staff collapsible group */}
+          <div>
+            <button
+              onClick={onToggleStaff}
+              className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
+                ${isStaffActive
+                  ? "bg-primary/10 text-primary font-medium"
+                  : ""
+                }
+              `}
+              aria-expanded={isStaffOpen}
+              aria-controls="staff-submenu"
+            >
+              <div className="flex items-center">
+                <PiUsers size={20} className="flex-shrink-0" aria-hidden />
+                {!isCollapsed && <span className="ml-3">เจ้าหน้าที่</span>}
+              </div>
+              {!isCollapsed && (
+                <FiChevronDown
+                  className={`transition-transform duration-200 ${isStaffOpen ? "rotate-180" : ""
+                    }`}
+                  aria-hidden
+                />
+              )}
+            </button>
+
+            {isStaffOpen && !isCollapsed && (
+              <div id="staff-submenu" className="pl-8 pt-2 space-y-2">
+                {STAFF_LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={pathname === link.href ? "page" : undefined}
+                    className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
+                      ${pathname === link.href
+                        ? "bg-primary/10 text-primary font-medium"
+                        : ""
+                      }
+                    `}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* ========== END: ส่วนที่แก้ไข ========== */}
+
+
           <Link
             href="/user_management"
             aria-current={pathname === "/user_management" ? "page" : undefined}
@@ -186,11 +254,10 @@ export default function Sidebar() {
             href="/product_management"
             aria-current={pathname === "/product_management" ? "page" : undefined}
             className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${
-              pathname === "/product_management"
+            ${pathname === "/product_management"
                 ? "bg-primary/10 text-primary font-medium"
                 : ""
-            }`}
+              }`}
           >
             <LuBox
               size={20}
