@@ -11,7 +11,7 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   login: (u: AuthUser) => void;
-  logout: () => void;
+  logout: () => Promise<void>; 
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,7 +19,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  // โหลดจาก localStorage เมื่อรีเฟรช/เข้าใหม่
   useEffect(() => {
     try {
       const raw = localStorage.getItem("auth_user");
@@ -32,9 +31,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("auth_user", JSON.stringify(u));
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("auth_user");
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem("auth_user");
+    }
   };
 
   const value = useMemo(() => ({ user, login, logout }), [user]);

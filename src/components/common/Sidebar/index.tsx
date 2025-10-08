@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePathname } from "next/navigation";
-
 import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
@@ -42,7 +41,6 @@ const STAFF_LINKS = [
   { href: "/staff", label: "สินค้าทั้งหมด" },
   { href: "/staff/product-outbound", label: "สินค้าออก" },
 ];
-
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
