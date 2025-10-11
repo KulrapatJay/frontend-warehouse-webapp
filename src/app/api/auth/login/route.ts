@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const backendApiUrl = 'http://localhost:8000/api/auth/login';
+    const backendApiUrl = `${process.env.BACKEND_API_URL}/api/auth/login`;
 
     const payloadForBackend = {
       identifier: username,

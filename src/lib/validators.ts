@@ -9,6 +9,7 @@ export const loginSchema = z.object({
 export type TLoginSchema = z.infer<typeof loginSchema>;
 
 export const addUserSchema = z.object({
+  employee_id: z.string().min(1, { message: "กรุณากรอกรหัสพนักงาน" }),
   prefix_id: z.coerce.number(),
   first_name: z.string().min(1, "กรอกชื่อ"),
   last_name: z.string().min(1, "กรอกนามสกุล"),
