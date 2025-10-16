@@ -67,11 +67,13 @@ function TableCard({
   );
 }
 
-/** ========= helpers (เหมือนเดิม) ========= */
+/** ========= helpers ========= */
 const formatDate = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
+  // ========== START: ส่วนที่แก้ไข ==========
+  const year = date.getFullYear() + 543; // บวก 543 เพื่อแปลงเป็น พ.ศ.
+  // ========== END: ส่วนที่แก้ไข ==========
   return `${day}/${month}/${year}`;
 };
 
@@ -133,9 +135,7 @@ export default function ReportPage() {
   );
 
   return (
-    // แก้ไข: ลบ -m-6 ออก และใช้ space-y-6 เพื่อจัดการระยะห่าง
     <div className="space-y-6">
-      {/* แก้ไข: ปรับ gap ให้สอดคล้องกัน */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KpiCard
           title="ยอดขายรวม"
@@ -158,7 +158,6 @@ export default function ReportPage() {
         />
       </div>
 
-      {/* แก้ไข: ปรับ gap ให้สอดคล้องกัน */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="ยอดขายรวม"
@@ -186,7 +185,6 @@ export default function ReportPage() {
         </ChartCard>
       </div>
 
-      {/* แก้ไข: ปรับ gap ให้สอดคล้องกัน */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="ยอดคำสั่งซื้อ"
@@ -216,7 +214,6 @@ export default function ReportPage() {
         </ChartCard>
       </div>
 
-      {/* แก้ไข: ปรับ gap ให้สอดคล้องกัน */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TableCard
           title="สินค้าขายดีที่สุด"

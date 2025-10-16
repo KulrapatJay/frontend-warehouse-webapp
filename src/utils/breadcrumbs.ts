@@ -41,6 +41,10 @@ export const ROUTES: RouteConfig[] = [
     ],
   },
   {
+    pattern: "/order",
+    crumbs: () => [{ label: "ออเดอร์", href: "/order" }],
+  },
+  {
     pattern: "/user_management",
     crumbs: () => [{ label: "จัดการผู้ใช้", href: "/user_management" }],
   },

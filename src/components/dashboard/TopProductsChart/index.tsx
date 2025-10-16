@@ -7,7 +7,7 @@ import { FiChevronDown } from "react-icons/fi";
 
 const MOCK_PRODUCT_DATA = {
   "เดือนนี้": {
-    total: "$21,000",
+    total: "฿21,000",
     change: "+25.2%",
     products: [
       { name: "คุกกี้", pct: 56, color: "bg-blue-500" },
@@ -16,7 +16,7 @@ const MOCK_PRODUCT_DATA = {
     ],
   },
   "เดือนล่าสุด": {
-    total: "$18,500",
+    total: "฿18,500",
     change: "+15.8%",
     products: [
       { name: "คุกกี้", pct: 45, color: "bg-blue-500" },
@@ -25,7 +25,7 @@ const MOCK_PRODUCT_DATA = {
     ],
   },
   "มิถุนายน": {
-    total: "$15,200",
+    total: "฿15,200",
     change: "+11.1%",
     products: [
         { name: "ครัวซอง", pct: 60, color: "bg-green-500" },
@@ -79,9 +79,9 @@ export default function TopProductsChart() {
               </div>
               <div className="w-full h-32 bg-base-200/50 rounded-md flex items-end">
                 <div
-                  className={`w-full rounded-md transition-all duration-500 ${p.color}`}
-                  style={{ height: `${p.pct}%` }}
-                  title={`${p.name}: ${p.pct}%`}
+                  className={`w-full rounded-md transition-all duration-500 ฿{p.color}`}
+                  style={{ height: `฿{p.pct}%` }}
+                  title={`฿{p.name}: ฿{p.pct}%`}
                 ></div>
               </div>
             </div>

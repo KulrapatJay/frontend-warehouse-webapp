@@ -12,7 +12,7 @@ import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
-import { TbReportSearch } from "react-icons/tb";
+import { TbReportSearch, TbShoppingCart } from "react-icons/tb";
 import { LuCircleUserRound } from "react-icons/lu";
 import { PiUsers } from "react-icons/pi";
 
@@ -26,10 +26,13 @@ type NavItem = {
   }>;
 };
 
+
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "เเดชบอร์ด", Icon: MdOutlineDashboard },
   { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
+  { href: "/order", label: "ออเดอร์", Icon: TbShoppingCart }, 
 ];
+
 
 const WAREHOUSE_LINKS = [
   { href: "/warehouse/1", label: "คลังสินค้า 1" },
@@ -43,7 +46,6 @@ const STAFF_LINKS = [
   { href: "/staff/product-outbound", label: "สินค้าออก" },
 ];
 
-
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const router = useRouter();
@@ -52,25 +54,19 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   // Warehouse state
-  const isWarehouseActive = pathname.startsWith('/warehouse');
+  const isWarehouseActive = pathname.startsWith("/warehouse");
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(isWarehouseActive);
 
-  // ========== START: ส่วนที่แก้ไข ==========
   // Staff state
-  const isStaffActive = pathname.startsWith('/staff');
+  const isStaffActive = pathname.startsWith("/staff");
   const [isStaffOpen, setIsStaffOpen] = useState(isStaffActive);
-
-  const onToggleStaff = useCallback(
-    () => setIsStaffOpen((v) => !v),
-    []
-  );
-  // ========== END: ส่วนที่แก้ไข ==========
 
   const onToggleSidebar = useCallback(() => setIsCollapsed((v) => !v), []);
   const onToggleWarehouse = useCallback(
     () => setIsWarehouseOpen((v) => !v),
     []
   );
+  const onToggleStaff = useCallback(() => setIsStaffOpen((v) => !v), []);
   const onLogout = useCallback(() => {
     logout();
     router.push("/login");
@@ -87,14 +83,16 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${isCollapsed ? "w-20" : "w-64"
-        }`}
+      className={`relative bg-base-100 text-base-content h-screen border-r border-base-300 transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20" : "w-64"
+      }`}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
         <div
-          className={`flex items-center h-16 p-4 border-b border-base-300 ${isCollapsed ? "justify-center" : "justify-between"
-            }`}
+          className={`flex items-center h-16 p-4 border-b border-base-300 ${
+            isCollapsed ? "justify-center" : "justify-between"
+          }`}
         >
           {!isCollapsed && (
             <Image
@@ -127,10 +125,11 @@ export default function Sidebar() {
               href={href}
               aria-current={pathname === href ? "page" : undefined}
               className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-              ${pathname === href
+              ${
+                pathname === href
                   ? "bg-primary/10 text-primary font-medium"
                   : ""
-                }`}
+              }`}
             >
               <Icon size={20} className="flex-shrink-0" aria-hidden />
               {!isCollapsed && <span className="ml-3">{label}</span>}
@@ -142,9 +141,10 @@ export default function Sidebar() {
             <button
               onClick={onToggleWarehouse}
               className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
-                ${isWarehouseActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : ""
+                ${
+                  isWarehouseActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : ""
                 }
               `}
               aria-expanded={isWarehouseOpen}
@@ -156,8 +156,9 @@ export default function Sidebar() {
               </div>
               {!isCollapsed && (
                 <FiChevronDown
-                  className={`transition-transform duration-200 ${isWarehouseOpen ? "rotate-180" : ""
-                    }`}
+                  className={`transition-transform duration-200 ${
+                    isWarehouseOpen ? "rotate-180" : ""
+                  }`}
                   aria-hidden
                 />
               )}
@@ -171,9 +172,10 @@ export default function Sidebar() {
                     href={link.href}
                     aria-current={pathname === link.href ? "page" : undefined}
                     className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
-                      ${pathname === link.href
-                        ? "bg-primary/10 text-primary font-medium"
-                        : ""
+                      ${
+                        pathname === link.href
+                          ? "bg-primary/10 text-primary font-medium"
+                          : ""
                       }
                     `}
                   >
@@ -184,15 +186,15 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* ========== START: ส่วนที่แก้ไข ========== */}
           {/* Staff collapsible group */}
           <div>
             <button
               onClick={onToggleStaff}
               className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
-                ${isStaffActive
-                  ? "bg-primary/10 text-primary font-medium"
-                  : ""
+                ${
+                  isStaffActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : ""
                 }
               `}
               aria-expanded={isStaffOpen}
@@ -204,8 +206,9 @@ export default function Sidebar() {
               </div>
               {!isCollapsed && (
                 <FiChevronDown
-                  className={`transition-transform duration-200 ${isStaffOpen ? "rotate-180" : ""
-                    }`}
+                  className={`transition-transform duration-200 ${
+                    isStaffOpen ? "rotate-180" : ""
+                  }`}
                   aria-hidden
                 />
               )}
@@ -219,9 +222,10 @@ export default function Sidebar() {
                     href={link.href}
                     aria-current={pathname === link.href ? "page" : undefined}
                     className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
-                      ${pathname === link.href
-                        ? "bg-primary/10 text-primary font-medium"
-                        : ""
+                      ${
+                        pathname === link.href
+                          ? "bg-primary/10 text-primary font-medium"
+                          : ""
                       }
                     `}
                   >
@@ -231,17 +235,16 @@ export default function Sidebar() {
               </div>
             )}
           </div>
-          {/* ========== END: ส่วนที่แก้ไข ========== */}
-
 
           <Link
             href="/user_management"
             aria-current={pathname === "/user_management" ? "page" : undefined}
             className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${pathname === "/user_management"
+            ${
+              pathname === "/user_management"
                 ? "bg-primary/10 text-primary font-medium"
                 : ""
-              }`}
+            }`}
           >
             <LuCircleUserRound
               size={20}
@@ -252,18 +255,17 @@ export default function Sidebar() {
           </Link>
           <Link
             href="/product_management"
-            aria-current={pathname === "/product_management" ? "page" : undefined}
+            aria-current={
+              pathname === "/product_management" ? "page" : undefined
+            }
             className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${pathname === "/product_management"
+            ${
+              pathname === "/product_management"
                 ? "bg-primary/10 text-primary font-medium"
                 : ""
-              }`}
+            }`}
           >
-            <LuBox
-              size={20}
-              className="flex-shrink-0"
-              aria-hidden
-            />
+            <LuBox size={20} className="flex-shrink-0" aria-hidden />
             {!isCollapsed && <span className="ml-3">จัดการสินค้า</span>}
           </Link>
         </nav>

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FaPlus } from 'react-icons/fa';
-import Link from 'next/link'; // 1. Import Link จาก next/link
+import Link from 'next/link';
 
 // --- Type Definitions ---
 type Product = {
@@ -30,17 +30,17 @@ type WarehouseData = {
 // --- Data ---
 const allWarehouseData: Record<string, WarehouseData> = {
   '1': { name: 'Warehouse 1', dailyInbound: 55, totalOutbound: 4200, products: [
-    { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2025-09-01' },
-    { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-02' },
+    { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2568-09-01' },
+    { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2568-09-02' },
   ]},
   '2': { name: 'Warehouse 2', dailyInbound: 15, totalOutbound: 600, products: [
-    { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2025-09-01' },
-    { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-04' },
-    { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2025-08-20' },
+    { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2568-09-01' },
+    { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2568-09-04' },
+    { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2568-08-20' },
   ]},
   '3': { name: 'Warehouse 3', dailyInbound: 20, totalOutbound: 0, products: [
-    { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
-    { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2025-09-03' },
+    { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2568-09-05' },
+    { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2568-09-03' },
   ]},
 };
 
@@ -60,6 +60,15 @@ const getStatusBadgeClass = (status: Product['status']) => {
     default: return 'badge-ghost';
   }
 };
+
+// ========== START: ส่วนที่แก้ไข (1. เพิ่มฟังก์ชันจัดรูปแบบวันที่) ==========
+const formatDateDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+};
+// ========== END: ส่วนที่แก้ไข (1. เพิ่มฟังก์ชันจัดรูปแบบวันที่) ==========
+
 export function filterProducts(
   list: Product[],
   searchTerm: string,
@@ -162,7 +171,6 @@ export default function StaffAllProductsPage() {
                    {warehouseOptions.map((w) => (<option key={w} value={w}>{w === "all" ? "คลังทั้งหมด" : w}</option>))}
                 </select>
                 
-                {/* 2. เปลี่ยน <button> เป็น <Link> และกำหนด href */}
                 <Link href="/staff/warehouse_management" className={`btn rounded-md text-white transition whitespace-nowrap ${ theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800' }`}>
                     <FaPlus className="h-4 w-4" />
                     เพิ่มรายการ
@@ -182,7 +190,16 @@ export default function StaffAllProductsPage() {
                 <tbody>
                   {paginatedProducts.map((p) => (
                     <tr key={p.id} className="hover border-b">
-                      <td className="p-4 font-mono">{p.productCode}</td><td className="p-4">{p.name}</td><td className="p-4">{p.category}</td><td className="p-4 text-right">{p.quantity.toLocaleString()}</td><td className="p-4">{p.unit}</td><td className="p-4">{p.warehouse}</td><td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td><td className="p-4">{p.lastUpdated}</td>
+                      <td className="p-4 font-mono">{p.productCode}</td>
+                      <td className="p-4">{p.name}</td>
+                      <td className="p-4">{p.category}</td>
+                      <td className="p-4 text-right">{p.quantity.toLocaleString()}</td>
+                      <td className="p-4">{p.unit}</td>
+                      <td className="p-4">{p.warehouse}</td>
+                      <td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td>
+                      {/* ========== START: ส่วนที่แก้ไข (2. เรียกใช้ฟังก์ชัน) ========== */}
+                      <td className="p-4">{formatDateDisplay(p.lastUpdated)}</td>
+                      {/* ========== END: ส่วนที่แก้ไข (2. เรียกใช้ฟังก์ชัน) ========== */}
                     </tr>
                   ))}
                 </tbody>
@@ -197,12 +214,10 @@ export default function StaffAllProductsPage() {
             {/* Footer Section */}
             {filteredProducts.length > 0 && (
               <div className="mt-4 flex items-center justify-between text-sm">
-                {/* Status Display */}
                 <div className="opacity-70">
                     กำลังเเสดง <span className="font-semibold">{startIdx + 1}</span>–<span className="font-semibold">{Math.min(endIdx, filteredProducts.length)}</span> จาก <span className="font-semibold">{filteredProducts.length}</span>
                 </div>
                 
-                {/* Page Buttons (always visible) */}
                 <div className="flex items-center gap-1">
                     <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => goto(page - 1)}>&lt;</button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -211,7 +226,6 @@ export default function StaffAllProductsPage() {
                     <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => goto(page + 1)}>&gt;</button>
                 </div>
                 
-                {/* Page Size Selector */}
                 <div className="flex items-center gap-2">
                     <span className="whitespace-nowrap opacity-70">จำนวนแถวต่อหน้า</span>
                     <select className="select select-bordered select-sm" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>

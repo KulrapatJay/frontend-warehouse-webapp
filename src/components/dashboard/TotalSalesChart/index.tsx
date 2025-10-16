@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useMemo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,7 +16,7 @@ import {
   type ScriptableContext,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { useTheme } from "@/contexts/ThemeContext"; 
+import { useTheme } from "@/contexts/ThemeContext";
 
 ChartJS.register(
   CategoryScale,
@@ -29,28 +29,55 @@ ChartJS.register(
   Title
 );
 
-const labels = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม"];
-const rawData = [12000, 9500, 18500, 11000, 25000];
+type TimeRange = 'week' | 'month' | 'year';
+
+// ========== START: ส่วนที่แก้ไข (1. เปลี่ยน $ เป็น ฿) ==========
+const allChartData = {
+  week: {
+    labels: ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."],
+    rawData: [17500, 28000, 22750, 42000, 31500, 52500, 45500],
+    total: "฿239,750",
+    change: "↑ 5.2%",
+    changeColor: "text-success",
+  },
+  month: {
+    labels: ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม"],
+    rawData: [12000, 9500, 18500, 11000, 25000],
+    total: "฿76,000",
+    change: "↑ 36.6%",
+    changeColor: "text-success",
+  },
+  year: {
+    labels: ["2565", "2566", "2567", "2568"],
+    rawData: [180000, 165000, 210000, 250000],
+    total: "฿805,000",
+    change: "↑ 19.0%",
+    changeColor: "text-success",
+  }
+};
+// ========== END: ส่วนที่แก้ไข (1. เปลี่ยน $ เป็น ฿) ==========
+
 
 export default function TotalSalesChart() {
-
   const { theme } = useTheme();
   const chartRef = useRef<ChartJS<"line">>(null);
+  
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
+  const currentData = useMemo(() => allChartData[timeRange], [timeRange]);
 
-  // 2. สร้าง Config สำหรับข้อมูลในกราฟ (lineData) แบบไดนามิกตาม Theme
+
   const lineData: ChartData<"line"> = {
-    labels,
+    labels: currentData.labels,
     datasets: [
       {
         label: "Sales",
-        data: rawData,
+        data: currentData.rawData,
         borderColor: theme === 'dark' ? '#3b82f6' : '#4b5563',
         backgroundColor: (context: ScriptableContext<"line">) => {
           const chart = context.chart;
           const { ctx, chartArea } = chart;
-          if (!chartArea) {
-            return undefined;
-          }
+          if (!chartArea) return undefined;
+          
           if (theme === 'dark') {
             const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
             gradient.addColorStop(0, 'rgba(59, 130, 246, 0)');
@@ -71,7 +98,6 @@ export default function TotalSalesChart() {
     ],
   };
 
-  // 3. สร้าง Config สำหรับตัวเลือกของกราฟ (lineOptions) แบบไดนามิกตาม Theme
   const lineOptions: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -84,6 +110,20 @@ export default function TotalSalesChart() {
         bodyColor: theme === 'dark' ? '#d1d5db' : '#4b5563',
         borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
         borderWidth: 1,
+        // ========== START: ส่วนที่แก้ไข (2. เปลี่ยน USD เป็น THB) ==========
+        callbacks: {
+            label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                    label += ': ';
+                }
+                if (context.parsed.y !== null) {
+                    label += new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(context.parsed.y);
+                }
+                return label;
+            }
+        }
+        // ========== END: ส่วนที่แก้ไข (2. เปลี่ยน USD เป็น THB) ==========
       },
       title: { display: false },
     },
@@ -98,7 +138,9 @@ export default function TotalSalesChart() {
         grid: { color: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' },
         ticks: {
           color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-          callback: (value: number | string) => `$${Number(value) / 1000}k`,
+          // ========== START: ส่วนที่แก้ไข (3. เปลี่ยน $ เป็น ฿) ==========
+          callback: (value: number | string) => `฿${Number(value) / 1000}k`,
+          // ========== END: ส่วนที่แก้ไข (3. เปลี่ยน $ เป็น ฿) ==========
         },
       },
     },
@@ -110,14 +152,29 @@ export default function TotalSalesChart() {
         <div className="flex items-center justify-between">
           <h3 className="card-title text-base">ยอดขายรวม</h3>
           <div className="join">
-            <button className="btn btn-xs join-item">สัปดาห์</button>
-            <button className="btn btn-xs join-item btn-active">เดือน</button>
-            <button className="btn btn-xs join-item">ปี</button>
+            <button 
+              className={`btn btn-xs join-item ${timeRange === 'week' ? 'btn-active' : ''}`}
+              onClick={() => setTimeRange('week')}
+            >
+              สัปดาห์
+            </button>
+            <button 
+              className={`btn btn-xs join-item ${timeRange === 'month' ? 'btn-active' : ''}`}
+              onClick={() => setTimeRange('month')}
+            >
+              เดือน
+            </button>
+            <button 
+              className={`btn btn-xs join-item ${timeRange === 'year' ? 'btn-active' : ''}`}
+              onClick={() => setTimeRange('year')}
+            >
+              ปี
+            </button>
           </div>
         </div>
         <div className="mt-2 text-sm">
-          <span className="font-semibold">$25,000</span>
-          <span className="ml-2 text-success">↑ 36.6%</span>
+          <span className="font-semibold">{currentData.total}</span>
+          <span className={`ml-2 ${currentData.changeColor}`}>{currentData.change}</span>
         </div>
         <div className="flex-grow mt-4">
           <Line ref={chartRef} data={lineData} options={lineOptions} />
