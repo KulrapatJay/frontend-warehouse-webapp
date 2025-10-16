@@ -190,7 +190,7 @@ export default function UserManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Link href="/add_user">
+            <Link href="user_management/add_user">
               <button className={`btn btn-primary text-white`}>
                 + เพิ่มผู้ใช้
               </button>

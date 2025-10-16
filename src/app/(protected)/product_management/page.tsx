@@ -6,8 +6,28 @@ import { FaPlus, FaRegEye } from "react-icons/fa";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
+import toast from "react-hot-toast";
 import Link from "next/link";
 
+// 1. Type ใหม่ให้ตรงกับข้อมูลที่ได้จาก API (มี Object ซ้อน)
+export type ApiProduct = {
+  id: number;
+  product_name: string;
+  sku: string;
+  price: string; // API อาจส่งตัวเลขมาเป็น string
+  quantity: number;
+  category: {
+    category_name: string;
+  };
+  unit: {
+    unit_name: string;
+  };
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// 2. Type 'Product' สำหรับแสดงผลใน Component (View Model)
 export type Product = {
   id: string;
   code: string;
@@ -15,58 +35,29 @@ export type Product = {
   category: string;
   price: number;
   qty: number;
-  unit: "ชิ้น" | "กล่อง" | "lot" | "ชุด" | string;
+  unit: string;
   date: string;
   imageUrl?: string | null;
   barcode?: string;
 };
 
-const DEMO_DATA: Product[] = [
-  {
-    id: "p01",
-    code: "abc1111",
-    name: "เค้กช็อกโกแลต",
-    category: "เบเกอรี่",
-    price: 100,
-    qty: 300,
-    unit: "ชิ้น",
-    date: "2025-01-15",
-    imageUrl: "https://picsum.photos/seed/cake/64/64",
-    barcode: "8851234567890",
-  },
-  {
-    id: "p02",
-    code: "abc2222",
-    name: "ขนมปังกระเทียม",
-    category: "เบเกอรี่",
-    price: 150,
-    qty: 200,
-    unit: "ชิ้น",
-    date: "2025-02-05",
-    imageUrl: "https://picsum.photos/seed/garlic/64/64",
-    barcode: "8852345678901",
-  },
-  {
-    id: "p03",
-    code: "abc3333",
-    name: "ครัวซองต์",
-    category: "เพสทรี",
-    price: 150,
-    qty: 251,
-    unit: "ชิ้น",
-    date: "2025-02-17",
-    imageUrl: "https://picsum.photos/seed/croissant/64/64",
-    barcode: "8853456789012",
-  },
-];
+// Type สำหรับ Category และ Unit
+export type Category = {
+  id: number;
+  category_name: string;
+};
 
-// Utility: THB formatting
+export type Unit = {
+  id: number;
+  unit_name: string;
+};
+
+// --- Utility & Filter Functions ---
 const fPrice = (n: number) =>
   new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(
     n
   );
 
-// Pure filter for testing
 export function filterProducts(
   list: Product[],
   search: string,
@@ -75,34 +66,92 @@ export function filterProducts(
   const s = search.trim().toLowerCase();
   return list.filter((p) => {
     const matchText =
-      p.name.toLowerCase().includes(s) ||
-      p.code.toLowerCase().includes(s) ||
-      p.category.toLowerCase().includes(s);
+      p.name.toLowerCase().includes(s) || p.code.toLowerCase().includes(s);
     const matchCat = category === "all" || p.category === category;
     return matchText && matchCat;
   });
 }
 
+// --- Component ---
 export default function ProductManagement() {
   const router = useRouter();
 
+  // States for data
+  const [products, setProducts] = useState<Product[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // States for filtering and pagination
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(5);
   const { theme } = useTheme();
 
-  // Derived lists
+  // Fetch all initial data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+
+        const [productsResponse, unitsResponse, categoriesResponse] =
+          await Promise.all([
+            fetch("/api/products"),
+            fetch("/api/products/units"),
+            fetch("/api/products/categories"),
+          ]);
+
+        if (!productsResponse.ok) throw new Error("Failed to fetch products");
+        if (!unitsResponse.ok) throw new Error("Failed to fetch units");
+        if (!categoriesResponse.ok)
+          throw new Error("Failed to fetch categories");
+
+        // กำหนด Type ให้ข้อมูลดิบที่รับมาเป็น ApiProduct[]
+        const productsData: ApiProduct[] = await productsResponse.json();
+        const unitsData: Unit[] = await unitsResponse.json();
+        const categoriesData: Category[] = await categoriesResponse.json();
+
+        // แปลงข้อมูลจาก ApiProduct -> Product เพื่อให้ Component นำไปใช้แสดงผล
+        const transformedProducts: Product[] = productsData.map((p) => ({
+          id: String(p.id),
+          code: p.sku,
+          name: p.product_name,
+          category: p.category.category_name,
+          price: Number(p.price),
+          unit: p.unit.unit_name,
+          date: p.created_at,
+          imageUrl: p.image_url
+            ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${p.image_url}`
+            : null,
+          qty: p.quantity,
+          barcode: p.sku,
+        }));
+
+        setProducts(transformedProducts);
+        setUnits(unitsData);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Derived lists for display
   const filteredList = useMemo(
-    () => filterProducts(DEMO_DATA, search, category),
-    [search, category]
+    () => filterProducts(products, search, categoryFilter),
+    [products, search, categoryFilter]
   );
 
-  // pagination calculation (match user_management style)
+  // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredList.length / pageSize));
   useEffect(() => {
     setPage(1);
-  }, [search, pageSize, category]);
+  }, [search, pageSize, categoryFilter]);
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
@@ -110,21 +159,14 @@ export default function ProductManagement() {
   const endIdx = startIdx + pageSize;
   const paged = filteredList.slice(startIdx, endIdx);
 
-  // Modals
+  // Modals state
   const [viewing, setViewing] = useState<Product | null>(null);
   const [removing, setRemoving] = useState<Product | null>(null);
-
-  const categories = useMemo(() => {
-    const set = new Set<string>(["all"]);
-    DEMO_DATA.forEach((d) => set.add(d.category));
-    return Array.from(set);
-  }, []);
 
   const goto = (p: number) => setPage(Math.min(Math.max(1, p), totalPages));
 
   return (
     <div className="space-y-4">
-      {/* Card wrapper (layout mirrored from user_management) */}
       <div className="bg-base-100 rounded-lg shadow-md p-6">
         {/* Header row: left count, right controls */}
         <div className="flex justify-between items-center mb-4">
@@ -144,25 +186,25 @@ export default function ProductManagement() {
             />
             <select
               className="select select-bordered"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
             >
+              <option value="all">หมวดหมู่ทั้งหมด</option>
               {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c === "all" ? "หมวดหมู่ทั้งหมด" : c}
+                <option key={c.id} value={c.category_name}>
+                  {c.category_name}
                 </option>
               ))}
             </select>
             <Link href="/product_management/add_product">
               <button
-                className={`btn btn-primary rounded-md text-white transition whitespace-nowrap ${/* <--- เพิ่ม whitespace-nowrap ตรงนี้ */
+                className={`btn btn-primary rounded-md text-white transition whitespace-nowrap ${
                   theme === "dark"
                     ? "bg-blue-600 hover:bg-blue-700"
                     : "bg-black hover:bg-gray-800"
                 }`}
               >
-                <FaPlus />
-                เพิ่มสินค้าใหม่
+                <FaPlus /> เพิ่มสินค้าใหม่
               </button>
             </Link>
           </div>
@@ -185,72 +227,75 @@ export default function ProductManagement() {
               </tr>
             </thead>
             <tbody>
-              {paged.map((p) => (
-                <tr
-                  key={p.id}
-                  className="hover:bg-base-200 border-t border-base-300"
-                >
-                  <td className="p-3">
-                    <div className="avatar">
-                      <div className="mask mask-squircle h-12 w-12">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={p.imageUrl || "/placeholder.png"}
-                          alt={p.name}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 font-mono">{p.code}</td>
-                  <td className="p-3 font-medium">{p.name}</td>
-                  <td className="p-3">{p.category}</td>
-                  <td className="p-3 text-right">{fPrice(p.price)}</td>
-                  <td className="p-3 text-right">
-                    {p.qty.toLocaleString("th-TH")}
-                  </td>
-                  <td className="p-3 text-right">{p.unit}</td>
-                  <td className="p-3">
-                    {new Date(p.date).toLocaleDateString("th-TH")}
-                  </td>
-                   <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => setViewing(p)}
-                      >
-                        <FaRegEye className="mr-1" /> รายละเอียด
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        onClick={() => alert(p.barcode || "ไม่มีบาร์โค้ด")}
-                      >
-                        <CiBarcode className="mr-1 text-xl" /> บาร์โค้ด
-                      </button>
-                      
-                      {/* ปุ่มแก้ไข: เพิ่ม text-white */}
-                      <button
-                        className="btn btn-sm btn-success text-white" 
-                        onClick={() =>
-                          router.push(
-                            `/product_management/edit_product/${p.id}`
-                          )
-                        }
-                      >
-                        <MdOutlineModeEditOutline className="mr-1" /> เเก้ไข
-                      </button>
-
-                      {/* ปุ่มลบ: เพิ่ม text-white */}
-                      <button
-                        className="btn btn-sm btn-error text-white"
-                        onClick={() => setRemoving(p)}
-                      >
-                        <MdOutlineDelete className="mr-1" /> ลบ
-                      </button>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={9} className="p-6 text-center">
+                    <span className="loading loading-spinner"></span>
+                    <p>กำลังโหลดข้อมูลสินค้า...</p>
                   </td>
                 </tr>
-              ))}
-              {paged.length === 0 && (
+              ) : paged.length > 0 ? (
+                paged.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="hover:bg-base-200 border-t border-base-300"
+                  >
+                    <td className="p-3">
+                      <div className="avatar">
+                        <div className="mask mask-squircle h-12 w-12">
+                          <img
+                            src={p.imageUrl || "/placeholder.png"}
+                            alt={p.name}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 font-mono">{p.code}</td>
+                    <td className="p-3 font-medium">{p.name}</td>
+                    <td className="p-3">{p.category}</td>
+                    <td className="p-3 text-right">{fPrice(p.price)}</td>
+                    <td className="p-3 text-right">
+                      {p.qty.toLocaleString("th-TH")}
+                    </td>
+                    <td className="p-3 text-right">{p.unit}</td>
+                    <td className="p-3">
+                      {new Date(p.date).toLocaleDateString("th-TH")}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => setViewing(p)}
+                        >
+                          <FaRegEye className="mr-1" /> รายละเอียด
+                        </button>
+                        <button
+                          className="btn btn-sm"
+                          onClick={() => alert(p.barcode || "ไม่มีบาร์โค้ด")}
+                        >
+                          <CiBarcode className="mr-1 text-xl" /> บาร์โค้ด
+                        </button>
+                        <button
+                          className="btn btn-sm btn-success text-white"
+                          onClick={() =>
+                            router.push(
+                              `/product_management/edit_product/${p.id}`
+                            )
+                          }
+                        >
+                          <MdOutlineModeEditOutline className="mr-1" /> เเก้ไข
+                        </button>
+                        <button
+                          className="btn btn-sm btn-error text-white"
+                          onClick={() => setRemoving(p)}
+                        >
+                          <MdOutlineDelete className="mr-1" /> ลบ
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td colSpan={9} className="p-6 text-center opacity-70">
                     ไม่พบสินค้า
@@ -303,7 +348,9 @@ export default function ProductManagement() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <label className="opacity-70 whitespace-nowrap">จำนวนแถวต่อหน้า</label>
+            <label className="opacity-70 whitespace-nowrap">
+              จำนวนแถวต่อหน้า
+            </label>
             <select
               className="select select-bordered select-sm"
               value={pageSize}
@@ -328,7 +375,6 @@ export default function ProductManagement() {
               <div className="space-y-3">
                 <div className="avatar">
                   <div className="mask mask-squircle h-24 w-24">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={viewing.imageUrl || "/placeholder.png"}
                       alt={viewing.name}
@@ -398,10 +444,39 @@ export default function ProductManagement() {
             </button>
             <button
               className="btn btn-error text-white"
-              onClick={() => {
+              onClick={async () => {
                 if (!removing) return;
-                console.log("DELETE", removing.id);
-                setRemoving(null);
+                const toastId = toast.loading("กำลังลบสินค้า...");
+
+                try {
+                  const res = await fetch(`/api/products/${removing.id}`, {
+                    method: "DELETE",
+                  });
+
+                  if (!res.ok) {
+                    const msg =
+                      res.status === 404
+                        ? "ไม่พบสินค้าในระบบ"
+                        : "ลบสินค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+                    throw new Error(msg);
+                  }
+
+                  // อัปเดตรายการสินค้าในหน้า (กรองออก)
+                  setProducts((prev) =>
+                    prev.filter((p) => p.id !== removing.id)
+                  );
+
+                  toast.success("ลบสินค้าเรียบร้อย!", { id: toastId });
+                } catch (err) {
+                  console.error(err);
+                  const msg =
+                    err instanceof Error
+                      ? err.message
+                      : "เกิดข้อผิดพลาดในการลบสินค้า";
+                  toast.error(msg, { id: toastId });
+                } finally {
+                  setRemoving(null);
+                }
               }}
             >
               ยืนยันลบ

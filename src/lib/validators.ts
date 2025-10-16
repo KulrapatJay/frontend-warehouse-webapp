@@ -23,17 +23,15 @@ export type TAddUserSchema = z.infer<typeof addUserSchema>;
 export const addProductSchema = z.object({
   code: z.string().min(1, "กรุณากรอกรหัสสินค้า"),
   name: z.string().min(1, "กรุณากรอกชื่อสินค้า"),
-  category: z.string().min(1, "กรุณาเลือกประเภท"),
-  
+  category: z.number().int().positive("เลือกหมวดหมู่"),
   price: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ"),
   qty: z.coerce
     .number()
     .int("จำนวนต้องเป็นจำนวนเต็ม")
     .min(0, "จำนวนต้องไม่ติดลบ"),
-  unit: z.string().min(1, "กรุณาเลือกหน่วย"),
-  // date: z.string().min(1, "กรุณาเลือกวันที่"),
+  unit: z.number().int().positive("เลือกหน่วยนับ"),
   barcode: z.string().optional().or(z.literal("")),
-  imageFile: z.any().optional(),
+  imageFile: z.instanceof(File).nullable().optional(),
 
 });
 export type TAddProduct = z.infer<typeof addProductSchema>;
