@@ -80,7 +80,7 @@ function CalendarDropdown({ selectedValue, onValueChange }: { selectedValue: Dat
       <div tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-72 mt-2">
         <div className="flex items-center justify-between p-2">
           <button className="btn btn-xs btn-ghost" onClick={handlePrevMonth}>&lt;</button>
-          <span className="font-semibold">{monthNames[displayDate.getMonth()]} {displayDate.getFullYear()}</span>
+          <span className="font-semibold">{monthNames[displayDate.getMonth()]} {displayDate.getFullYear() + 543}</span>
           <button className="btn btn-xs btn-ghost" onClick={handleNextMonth}>&gt;</button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-xs mt-2">
@@ -110,18 +110,17 @@ export default function ReportPage() {
   const ordersToday = 320;
   const salesTodayTHB = 2800;
   
-  const now = new Date();
-  const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const currentYear = new Date().getFullYear();
 
-  // --- State สำหรับข้อมูลรายเดือน ---
-  const [salesSelectedMonth, setSalesSelectedMonth] = useState(currentMonthValue);
-  const [monthlySalesData, setMonthlySalesData] = useState<number[]>([]);
-  const [ordersSelectedMonth, setOrdersSelectedMonth] = useState(currentMonthValue);
-  const [monthlyOrdersData, setMonthlyOrdersData] = useState<number[]>([]);
-  const [topProductsSelectedMonth, setTopProductsSelectedMonth] = useState(currentMonthValue);
-  const [topProductsMonthData, setTopProductsMonthData] = useState<TopProduct[]>([]);
+  // --- State สำหรับข้อมูลรายปี ---
+  const [salesSelectedYear, setSalesSelectedYear] = useState(currentYear);
+  const [yearlySalesData, setYearlySalesData] = useState<number[]>([]);
+  const [ordersSelectedYear, setOrdersSelectedYear] = useState(currentYear);
+  const [yearlyOrdersData, setYearlyOrdersData] = useState<number[]>([]);
+  const [topProductsSelectedYear, setTopProductsSelectedYear] = useState(currentYear);
+  const [topProductsYearData, setTopProductsYearData] = useState<TopProduct[]>([]);
 
-  // --- State สำหรับข้อมูลรายสัปดาห์ (แยกกัน) ---
+  // --- State สำหรับข้อมูลรายสัปดาห์ ---
   const [weeklySalesSelectedDate, setWeeklySalesSelectedDate] = useState(new Date());
   const [weeklySalesData, setWeeklySalesData] = useState<number[]>([]);
   const [weeklyOrdersSelectedDate, setWeeklyOrdersSelectedDate] = useState(new Date());
@@ -129,37 +128,55 @@ export default function ReportPage() {
   const [weeklyTopProductsSelectedDate, setWeeklyTopProductsSelectedDate] = useState(new Date());
   const [weeklyTopProductsData, setWeeklyTopProductsData] = useState<TopProduct[]>(topDay);
 
-  const monthOptions = useMemo(() => {
+  const yearOptions = useMemo(() => {
     const options = [];
-    const currentYear = new Date().getFullYear();
-    const monthNames = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",];
-    for (let i = 0; i < 12; i++) {
-      options.push({ label: monthNames[i], value: `${currentYear}-${String(i + 1).padStart(2, "0")}`, });
+    const year = new Date().getFullYear();
+    for (let i = 0; i < 5; i++) {
+      const targetYear = year - i;
+      options.push({ label: `พ.ศ. ${targetYear + 543}`, value: targetYear });
     }
-    return options;
+    return options.reverse();
   }, []);
   
-  // --- useEffects สำหรับข้อมูลรายเดือน ---
+  // --- useEffects สำหรับข้อมูลรายปี ---
   useEffect(() => {
-    setMonthlySalesData(Array.from({ length: 13 }, () => Math.floor(Math.random() * 30000) + 20000));
-  }, [salesSelectedMonth]);
+    setYearlySalesData(Array.from({ length: 12 }, () => Math.floor(Math.random() * 30000) + 20000));
+  }, [salesSelectedYear]);
   useEffect(() => {
-    setMonthlyOrdersData(Array.from({ length: 13 }, () => Math.floor(Math.random() * 250) + 300));
-  }, [ordersSelectedMonth]);
-  useEffect(() => {
-    setTopProductsMonthData([...topMonth].sort(() => 0.5 - Math.random()).map(p => ({ ...p, qty: Math.floor(Math.random() * 300) + 50 })));
-  }, [topProductsSelectedMonth]);
+    setYearlyOrdersData(Array.from({ length: 12 }, () => Math.floor(Math.random() * 250) + 300));
+  }, [ordersSelectedYear]);
 
-  // --- useEffects สำหรับข้อมูลรายสัปดาห์ (แยกกัน) ---
+  // START: แก้ไขส่วนนี้
+  useEffect(() => {
+    const newData = [...topMonth].sort(() => 0.5 - Math.random()).map(product => {
+        const unitPrice = product.price / product.qty;
+        const newQty = Math.floor(Math.random() * 300) + 50;
+        const newTotalPrice = unitPrice * newQty;
+        return { ...product, qty: newQty, price: newTotalPrice, };
+      });
+    setTopProductsYearData(newData);
+  }, [topProductsSelectedYear]);
+  // END: แก้ไข
+
+  // --- useEffects สำหรับข้อมูลรายสัปดาห์ ---
   useEffect(() => {
     setWeeklySalesData(Array.from({ length: 7 }, () => Math.floor(Math.random() * 1500) + 1500));
   }, [weeklySalesSelectedDate]);
   useEffect(() => {
     setWeeklyOrdersData(Array.from({ length: 7 }, () => Math.floor(Math.random() * 20) + 15));
   }, [weeklyOrdersSelectedDate]);
+
+  // START: แก้ไขส่วนนี้
   useEffect(() => {
-    setWeeklyTopProductsData([...topDay].sort(() => 0.5 - Math.random()).map(p => ({...p, qty: Math.floor(Math.random() * 50) + 10})));
+    const newData = [...topDay].sort(() => 0.5 - Math.random()).map(product => {
+        const unitPrice = product.price / product.qty;
+        const newQty = Math.floor(Math.random() * 50) + 10;
+        const newTotalPrice = unitPrice * newQty;
+        return { ...product, qty: newQty, price: newTotalPrice };
+    });
+    setWeeklyTopProductsData(newData);
   }, [weeklyTopProductsSelectedDate]);
+  // END: แก้ไข
 
   const createLast7DaysLabels = (endDate: Date) => {
     const labels = [];
@@ -178,39 +195,32 @@ export default function ReportPage() {
   const todayFormatted = formatDate(today);
   const dateRange30Days = `${formatDate(thirtyDaysAgo)} - ${todayFormatted}`;
   
-  const createDynamicChartLabels = (selectedValue: string) => {
-    if (!selectedValue) return [];
-    const labels = [];
-    const shortMonthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค.",];
-    const [year, month] = selectedValue.split('-').map(Number);
-    const currentDate = new Date(year, month - 1, 1);
-    for (let i = 0; i < 13; i++) {
-        const monthIndex = currentDate.getMonth();
-        const yearBE = (currentDate.getFullYear() % 100) + 43;
-        labels.push(`${shortMonthNames[monthIndex]} ${yearBE}`);
-        currentDate.setMonth(currentDate.getMonth() - 1);
-    }
-    return labels.reverse();
-  };
+  const yearlyChartLabels = useMemo(() => ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."], []);
 
-  const salesChartLabels = useMemo(() => createDynamicChartLabels(salesSelectedMonth), [salesSelectedMonth]);
-  const ordersChartLabels = useMemo(() => createDynamicChartLabels(ordersSelectedMonth), [ordersSelectedMonth]);
-
-  const totalSalesInTopMonth = topProductsMonthData.reduce((sum, item) => sum + item.price, 0);
+  const totalSalesInTopYear = topProductsYearData.reduce((sum, item) => sum + item.price, 0);
   const totalSalesInTopDay = weeklyTopProductsData.reduce((sum, item) => sum + item.price, 0);
   
-  const MonthDropdown = ({ selectedValue, onValueChange }: { selectedValue: string; onValueChange: (value: string) => void; }) => ( <div className="dropdown dropdown-end"> <div tabIndex={0} role="button" className="btn btn-ghost btn-sm"> {monthOptions.find(opt => opt.value === selectedValue)?.label || "เลือกเดือน"} <svg width="12px" height="12px" className="h-2 w-2 fill-current opacity-60 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048"><path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path></svg> </div> <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"> {monthOptions.map((month) => ( <li key={month.value}> <a className={selectedValue === month.value ? "active" : ""} onClick={() => onValueChange(month.value)}> {month.label} </a> </li> ))} </ul> </div> );
+  const YearDropdown = ({ selectedValue, onValueChange }: { selectedValue: number; onValueChange: (value: number) => void; }) => (
+    <div className="dropdown dropdown-end">
+      <div tabIndex={0} role="button" className="btn btn-ghost btn-sm">
+        {yearOptions.find(opt => opt.value === selectedValue)?.label || "เลือกปี"}
+        <svg width="12px" height="12px" className="h-2 w-2 fill-current opacity-60 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048"><path d="M1799 349l242 241-1017 1017L7 590l242-241 775 775 775-775z"></path></svg>
+      </div>
+      <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+        {yearOptions.map((year) => (
+          <li key={year.value}>
+            <a className={selectedValue === year.value ? "active" : ""} onClick={() => onValueChange(year.value)}>
+              {year.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
   
-  const createDynamicSubtitle = (selectedValue: string) => {
-    if (!selectedValue) return "";
-    const shortMonthNames = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค.",];
-    const [endYear, endMonth] = selectedValue.split('-').map(Number);
-    const endDate = new Date(endYear, endMonth - 1, 1);
-    const startDate = new Date(endDate);
-    startDate.setFullYear(startDate.getFullYear() - 1);
-    const startYearBE = (startDate.getFullYear() % 100) + 43;
-    const endYearBE = (endDate.getFullYear() % 100) + 43;
-    return `${shortMonthNames[startDate.getMonth()]} ${startYearBE} - ${shortMonthNames[endDate.getMonth()]} ${endYearBE}`;
+  const createSubtitleForYear = (selectedYear: number) => {
+    if (!selectedYear) return "";
+    return `มกราคม - ธันวาคม ${selectedYear + 543}`;
   };
 
   return (
@@ -222,43 +232,36 @@ export default function ReportPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="ยอดขายรวม" amount={`฿${(monthlySalesData[monthlySalesData.length - 1] || 0).toLocaleString()}`} headerRightContent={<MonthDropdown selectedValue={salesSelectedMonth} onValueChange={setSalesSelectedMonth} />} change="15.2%" subtitle={createDynamicSubtitle(salesSelectedMonth)}>
-          <BarChart data={monthlySalesData} labels={salesChartLabels} />
+        <ChartCard title="ยอดขายรวม" amount={`฿${(yearlySalesData.reduce((a, b) => a + b, 0) || 0).toLocaleString()}`} headerRightContent={<YearDropdown selectedValue={salesSelectedYear} onValueChange={setSalesSelectedYear} />} change="15.2%" subtitle={createSubtitleForYear(salesSelectedYear)}>
+          <BarChart data={yearlySalesData} labels={yearlyChartLabels} />
         </ChartCard>
         
-        {/* START: แก้ไข: ลบ subtitle ออก */}
-        <ChartCard title="ยอดขายรวม" amount={`฿${(weeklySalesData[weeklySalesData.length - 1] || 0).toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklySalesSelectedDate} onValueChange={setWeeklySalesSelectedDate} />} change="1.8%" down>
+        <ChartCard title="ยอดขายรวม (7 วัน)" amount={`฿${(weeklySalesData.reduce((a, b) => a + b, 0) || 0).toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklySalesSelectedDate} onValueChange={setWeeklySalesSelectedDate} />} change="1.8%" down>
           <BarChart data={weeklySalesData} labels={createLast7DaysLabels(weeklySalesSelectedDate)} />
         </ChartCard>
-        {/* END: แก้ไข */}
-
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="ยอดคำสั่งซื้อ" amount={(monthlyOrdersData[monthlyOrdersData.length - 1] || 0).toLocaleString()} headerRightContent={<MonthDropdown selectedValue={ordersSelectedMonth} onValueChange={setOrdersSelectedMonth} />} change="7.1%" subtitle={createDynamicSubtitle(ordersSelectedMonth)}>
-          <BarChart data={monthlyOrdersData} labels={ordersChartLabels} />
+        <ChartCard title="ยอดคำสั่งซื้อ" amount={(yearlyOrdersData.reduce((a, b) => a + b, 0) || 0).toLocaleString()} headerRightContent={<YearDropdown selectedValue={ordersSelectedYear} onValueChange={setOrdersSelectedYear} />} change="7.1%" subtitle={createSubtitleForYear(ordersSelectedYear)}>
+          <BarChart data={yearlyOrdersData} labels={yearlyChartLabels} />
         </ChartCard>
 
-        {/* START: แก้ไข: ลบ subtitle ออก */}
-        <ChartCard title="ยอดคำสั่งซื้อ" amount={`${(weeklyOrdersData[weeklyOrdersData.length - 1] || 0).toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklyOrdersSelectedDate} onValueChange={setWeeklyOrdersSelectedDate} />} change="3.4%">
+        <ChartCard title="ยอดคำสั่งซื้อ (7 วัน)" amount={`${(weeklyOrdersData.reduce((a, b) => a + b, 0) || 0).toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklyOrdersSelectedDate} onValueChange={setWeeklyOrdersSelectedDate} />} change="3.4%">
           <BarChart data={weeklyOrdersData} labels={createLast7DaysLabels(weeklyOrdersSelectedDate)}/>
         </ChartCard>
-        {/* END: แก้ไข */}
-
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TableCard title="สินค้าขายดีที่สุด" amount={`฿${totalSalesInTopMonth.toLocaleString()}`} headerRightContent={<MonthDropdown selectedValue={topProductsSelectedMonth} onValueChange={setTopProductsSelectedMonth} />} change="+5.8%" subtitle={createDynamicSubtitle(topProductsSelectedMonth)}>
+        <TableCard title="สินค้าขายดีที่สุด" amount={`฿${totalSalesInTopYear.toLocaleString()}`} headerRightContent={<YearDropdown selectedValue={topProductsSelectedYear} onValueChange={setTopProductsSelectedYear} />} change="+5.8%" subtitle={createSubtitleForYear(topProductsSelectedYear)}>
           <div className="mt-3 overflow-x-auto">
             <table className="table table-sm">
               <thead><tr><th>สินค้า</th><th className="text-right">จำนวน</th><th className="text-right">ยอดขาย</th></tr></thead>
-              <tbody>{topProductsMonthData.map((p, i) => (<tr key={i}><td>{p.name}</td><td className="text-right">{p.qty.toLocaleString()}</td><td className="text-right">{`฿${p.price.toLocaleString()}`}</td></tr>))}</tbody>
+              <tbody>{topProductsYearData.map((p, i) => (<tr key={i}><td>{p.name}</td><td className="text-right">{p.qty.toLocaleString()}</td><td className="text-right">{`฿${p.price.toLocaleString()}`}</td></tr>))}</tbody>
             </table>
           </div>
         </TableCard>
 
-        {/* START: แก้ไข: ลบ subtitle ออก */}
-        <TableCard title="สินค้าขายดีที่สุด" amount={`฿${totalSalesInTopDay.toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklyTopProductsSelectedDate} onValueChange={setWeeklyTopProductsSelectedDate} />} change="-0.5%" down>
+        <TableCard title="สินค้าขายดีที่สุด (7 วัน)" amount={`฿${totalSalesInTopDay.toLocaleString()}`} headerRightContent={<CalendarDropdown selectedValue={weeklyTopProductsSelectedDate} onValueChange={setWeeklyTopProductsSelectedDate} />} change="-0.5%" down>
           <div className="mt-3 overflow-x-auto">
             <table className="table table-sm">
               <thead><tr><th>สินค้า</th><th className="text-right">จำนวน</th><th className="text-right">ยอดขาย</th></tr></thead>
@@ -266,8 +269,6 @@ export default function ReportPage() {
             </table>
           </div>
         </TableCard>
-        {/* END: แก้ไข */}
-
       </div>
     </div>
   );
