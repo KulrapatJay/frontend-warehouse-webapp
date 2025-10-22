@@ -4,6 +4,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
 import EditUserModal from "@/components/forms/EditUserForm";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
+// ========== START: ส่วนที่แก้ไข (1. Import Icon) ==========
+import { FaPlus } from "react-icons/fa";
+// ========== END: ส่วนที่แก้ไข (1. Import Icon) ==========
 import toast from "react-hot-toast";
 import { User as userMock } from "@/mock/user";
 import { Prefix } from "@/mock/prefixs";
@@ -107,15 +110,18 @@ export default function UserManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {/* ========== START: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
             <Link href="/user_management/add_user">
               <button
-                className={`px-4 py-2 rounded-md text-white transition ${
+                className={`btn rounded-md text-white transition whitespace-nowrap ${
                   theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : "bg-black hover:bg-gray-800"
                 }`}
               >
-                + เพิ่มผู้ใช้
+                <FaPlus />
+                เพิ่มผู้ใช้
               </button>
             </Link>
+            {/* ========== END: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
           </div>
         </div>
 

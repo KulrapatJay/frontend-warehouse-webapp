@@ -3,9 +3,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FaPlus } from 'react-icons/fa';
-import Link from 'next/link'; // 1. Import Link จาก next/link
+import Link from 'next/link';
 
-// --- Type Definitions ---
+// ========== START: ส่วนที่แก้ไข 1. Type Definitions ==========
 type Product = {
   id: number;
   productCode: string;
@@ -16,10 +16,14 @@ type Product = {
   unit: string;
   status: 'มีสินค้า' | 'สินค้าใกล้หมด' | 'สินค้าหมด';
   responsible: string;
+  productionDate: string; // เพิ่ม: วันที่ผลิต
+  expirationDate: string; // เพิ่ม: วันหมดอายุ
   lastUpdated: string;
   warehouse: string;
 };
 type BaseProduct = Omit<Product, 'warehouse'>;
+// ========== END: ส่วนที่แก้ไข 1. Type Definitions ==========
+
 type WarehouseData = {
   name: string;
   dailyInbound: number;
@@ -27,22 +31,23 @@ type WarehouseData = {
   products: BaseProduct[];
 };
 
-// --- Data ---
+// ========== START: ส่วนที่แก้ไข 2. Data ==========
 const allWarehouseData: Record<string, WarehouseData> = {
   '1': { name: 'Warehouse 1', dailyInbound: 55, totalOutbound: 4200, products: [
-    { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2025-09-01' },
-    { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-02' },
+    { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', productionDate: '2568-08-30', expirationDate: '2568-09-05', lastUpdated: '2568-09-01' },
+    { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', productionDate: '2568-09-01', expirationDate: '2568-09-08', lastUpdated: '2568-09-02' },
   ]},
   '2': { name: 'Warehouse 2', dailyInbound: 15, totalOutbound: 600, products: [
-    { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2025-09-01' },
-    { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2025-09-04' },
-    { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2025-08-20' },
+    { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', productionDate: '2568-08-28', expirationDate: '2568-09-12', lastUpdated: '2568-09-01' },
+    { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', productionDate: '2568-09-01', expirationDate: '2568-09-15', lastUpdated: '2568-09-04' },
+    { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', productionDate: '2568-08-15', expirationDate: '2568-08-25', lastUpdated: '2568-08-20' },
   ]},
   '3': { name: 'Warehouse 3', dailyInbound: 20, totalOutbound: 0, products: [
-    { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2025-09-05' },
-    { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2025-09-03' },
+    { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', productionDate: '2568-06-01', expirationDate: '2569-06-01', lastUpdated: '2568-09-05' },
+    { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', productionDate: '2568-08-20', expirationDate: '2568-11-20', lastUpdated: '2568-09-03' },
   ]},
 };
+// ========== END: ส่วนที่แก้ไข 2. Data ==========
 
 const allProducts: Product[] = Object.values(allWarehouseData).flatMap((data) =>
   data.products.map((product) => ({
@@ -60,6 +65,14 @@ const getStatusBadgeClass = (status: Product['status']) => {
     default: return 'badge-ghost';
   }
 };
+
+const formatDateDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+};
+
+// ========== START: ส่วนที่แก้ไข 3. filterProducts Function ==========
 export function filterProducts(
   list: Product[],
   searchTerm: string,
@@ -71,12 +84,16 @@ export function filterProducts(
     const matchSearch =
       product.name.toLowerCase().includes(term) ||
       product.productCode.toLowerCase().includes(term) ||
-      product.skuCode.toLowerCase().includes(term);
+      product.skuCode.toLowerCase().includes(term) ||
+      formatDateDisplay(product.productionDate).includes(term) ||
+      formatDateDisplay(product.expirationDate).includes(term);
     const matchCategory = category === "all" || product.category === category;
     const matchWarehouse = warehouse === "all" || product.warehouse === warehouse;
     return matchSearch && matchCategory && matchWarehouse;
   });
 }
+// ========== END: ส่วนที่แก้ไข 3. filterProducts Function ==========
+
 
 export default function StaffAllProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -162,7 +179,6 @@ export default function StaffAllProductsPage() {
                    {warehouseOptions.map((w) => (<option key={w} value={w}>{w === "all" ? "คลังทั้งหมด" : w}</option>))}
                 </select>
                 
-                {/* 2. เปลี่ยน <button> เป็น <Link> และกำหนด href */}
                 <Link href="/staff/warehouse_management" className={`btn rounded-md text-white transition whitespace-nowrap ${ theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800' }`}>
                     <FaPlus className="h-4 w-4" />
                     เพิ่มรายการ
@@ -174,15 +190,37 @@ export default function StaffAllProductsPage() {
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="table w-full">
+                {/* ========== START: ส่วนที่แก้ไข 4. Table Header ========== */}
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
                   <tr>
-                    <th className="p-4">รหัสสินค้า</th><th className="p-4">ชื่อสินค้า</th><th className="p-4">หมวดหมู่</th><th className="p-4 text-right">จำนวน</th><th className="p-4">หน่วย</th><th className="p-4">คลังสินค้า</th><th className="p-4 text-center">สถานะ</th><th className="p-4">อัปเดตล่าสุด</th>
+                    <th className="p-4">รหัสสินค้า</th>
+                    <th className="p-4">ชื่อสินค้า</th>
+                    <th className="p-4">หมวดหมู่</th>
+                    <th className="p-4 text-right">จำนวน</th>
+                    <th className="p-4">หน่วย</th>
+                    <th className="p-4">คลังสินค้า</th>
+                    <th className="p-4 text-center">สถานะ</th>
+                    <th className="p-4">วันที่ผลิต</th>
+                    <th className="p-4">วันหมดอายุ</th>
+                    <th className="p-4">อัปเดตล่าสุด</th>
                   </tr>
                 </thead>
+                {/* ========== END: ส่วนที่แก้ไข 4. Table Header ========== */}
                 <tbody>
                   {paginatedProducts.map((p) => (
                     <tr key={p.id} className="hover border-b">
-                      <td className="p-4 font-mono">{p.productCode}</td><td className="p-4">{p.name}</td><td className="p-4">{p.category}</td><td className="p-4 text-right">{p.quantity.toLocaleString()}</td><td className="p-4">{p.unit}</td><td className="p-4">{p.warehouse}</td><td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td><td className="p-4">{p.lastUpdated}</td>
+                      <td className="p-4 font-mono">{p.productCode}</td>
+                      <td className="p-4">{p.name}</td>
+                      <td className="p-4">{p.category}</td>
+                      <td className="p-4 text-right">{p.quantity.toLocaleString()}</td>
+                      <td className="p-4">{p.unit}</td>
+                      <td className="p-4">{p.warehouse}</td>
+                      <td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td>
+                      {/* ========== START: ส่วนที่แก้ไข 5. Table Body ========== */}
+                      <td className="p-4">{formatDateDisplay(p.productionDate)}</td>
+                      <td className="p-4 text-error font-medium">{formatDateDisplay(p.expirationDate)}</td>
+                      <td className="p-4">{formatDateDisplay(p.lastUpdated)}</td>
+                      {/* ========== END: ส่วนที่แก้ไข 5. Table Body ========== */}
                     </tr>
                   ))}
                 </tbody>
@@ -197,12 +235,10 @@ export default function StaffAllProductsPage() {
             {/* Footer Section */}
             {filteredProducts.length > 0 && (
               <div className="mt-4 flex items-center justify-between text-sm">
-                {/* Status Display */}
                 <div className="opacity-70">
                     กำลังเเสดง <span className="font-semibold">{startIdx + 1}</span>–<span className="font-semibold">{Math.min(endIdx, filteredProducts.length)}</span> จาก <span className="font-semibold">{filteredProducts.length}</span>
                 </div>
                 
-                {/* Page Buttons (always visible) */}
                 <div className="flex items-center gap-1">
                     <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => goto(page - 1)}>&lt;</button>
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -211,7 +247,6 @@ export default function StaffAllProductsPage() {
                     <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => goto(page + 1)}>&gt;</button>
                 </div>
                 
-                {/* Page Size Selector */}
                 <div className="flex items-center gap-2">
                     <span className="whitespace-nowrap opacity-70">จำนวนแถวต่อหน้า</span>
                     <select className="select select-bordered select-sm" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>

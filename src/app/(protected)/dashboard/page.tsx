@@ -6,26 +6,27 @@ import TopProductsChart from "@/components/dashboard/TopProductsChart";
 
 export default function DashboardPage() {
   
+  // ========== START: ส่วนที่แก้ไข ==========
   const recentOrdersData = [
     {
       id: "#5678",
       customer: "Floyd Miles",
       product: "ครัวซอง",
-      total: "$155.00",
+      total: "฿155.00",
       status: "เสร็จสิ้น",
     },
     {
       id: "#5679",
       customer: "Leslie Alexander",
       product: "คุกกี้",
-      total: "$1,250.00",
+      total: "฿1,250.00",
       status: "กำลังดำเนินการ",
     },
     {
       id: "#5680",
       customer: "Darlene Robertson",
       product: "พาย",
-      total: "$25.00",
+      total: "฿25.00",
       status: "ยกเลิก",
     },
     // --- 6 รายการที่เพิ่มเข้ามาใหม่ ---
@@ -33,45 +34,46 @@ export default function DashboardPage() {
       id: "#5681",
       customer: "Jane Cooper",
       product: "คุกกี้",
-      total: "$88.00",
+      total: "฿88.00",
       status: "เสร็จสิ้น",
     },
     {
       id: "#5682",
       customer: "Ronald Richards",
       product: "พาย",
-      total: "$32.50",
+      total: "฿32.50",
       status: "เสร็จสิ้น",
     },
     {
       id: "#5683",
       customer: "Jacob Jones",
       product: "ครัวซอง",
-      total: "$240.00",
+      total: "฿240.00",
       status: "กำลังดำเนินการ",
     },
     {
       id: "#5684",
       customer: "Esther Howard",
       product: "คุกกี้",
-      total: "$1,500.00",
+      total: "฿1,500.00",
       status: "เสร็จสิ้น",
     },
     {
       id: "#5685",
       customer: "Robert Fox",
       product: "พาย",
-      total: "$45.00",
+      total: "฿45.00",
       status: "ยกเลิก",
     },
     {
       id: "#5686",
       customer: "Jenny Wilson",
       product: "ครัวซอง",
-      total: "$180.00",
+      total: "฿180.00",
       status: "กำลังดำเนินการ",
     },
   ];
+  // ========== END: ส่วนที่แก้ไข ==========
 
   return (
     <div className="space-y-6">

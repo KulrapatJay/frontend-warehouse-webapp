@@ -8,7 +8,9 @@ export default function KpiCards() {
   const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
+    // ========== START: ส่วนที่แก้ไข ==========
+    const year = date.getFullYear() + 543; // บวก 543 เพื่อแปลงเป็น พ.ศ.
+    // ========== END: ส่วนที่แก้ไข ==========
     return `${day}/${month}/${year}`;
   };
 
@@ -19,7 +21,7 @@ export default function KpiCards() {
     {
       title: "ยอดขายรวม",
       subtitle: dateRange,
-      value: "$12,450.54",
+      value: "฿12,450.54",
       change: "+29.7%",
     },
     {
