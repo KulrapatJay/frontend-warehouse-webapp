@@ -26,7 +26,6 @@ type OrderDetail = Order & {
   items: ProductInOrder[];
 };
 
-// ========== START: ส่วนที่แก้ไข (ปรับราคาสินค้าและยอดรวม) ==========
 const DEMO_ORDER_DETAILS: { [key: string]: OrderDetail } = {
   'o01': { id: 'o01', orderNumber: 'ORD-2568001', customerName: 'สมชาย ใจดี', orderDate: '2568-10-15', totalAmount: 565, itemCount: 3, status: 'จัดส่งสำเร็จ', items: [ { name: 'เค้กช็อกโกแลต', qty: 2, price: 250 }, { name: 'ครัวซองต์', qty: 1, price: 65 } ] },
   'o02': { id: 'o02', orderNumber: 'ORD-2568002', customerName: 'สมหญิง มุ่งมั่น', orderDate: '2568-10-16', totalAmount: 160, itemCount: 2, status: 'กำลังจัดส่ง', items: [ { name: 'ขนมปังกระเทียม', qty: 2, price: 80 } ] },
@@ -35,8 +34,6 @@ const DEMO_ORDER_DETAILS: { [key: string]: OrderDetail } = {
   'o05': { id: 'o05', orderNumber: 'ORD-2568005', customerName: 'ปิติ ยินดี', orderDate: '2568-10-17', totalAmount: 180, itemCount: 2, status: 'รอดำเนินการ', items: [ { name: 'บราวนี่', qty: 2, price: 90 } ] },
   'o06': { id: 'o06', orderNumber: 'ORD-2568006', customerName: 'วีระ มานะ', orderDate: '2568-10-17', totalAmount: 785, itemCount: 8, status: 'จัดส่งสำเร็จ', items: [ { name: 'คัพเค้ก', qty: 5, price: 85 }, { name: 'ทาร์ตผลไม้', qty: 3, price: 120 } ] },
 };
-// ========== END: ส่วนที่แก้ไข (ปรับราคาสินค้าและยอดรวม) ==========
-
 
 // --- Helper Functions ---
 const getStatusBadgeClass = (status: Order['status']) => {
@@ -87,6 +84,27 @@ export default function OrderPage() {
   const pageSizeOptions = [5, 10, 15, 20];
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
   const [viewingOrder, setViewingOrder] = useState<OrderDetail | null>(null);
+  
+  // ========== START: ส่วนที่เพิ่มเข้ามาสำหรับ Popup ยืนยัน ==========
+  const [statusUpdateInfo, setStatusUpdateInfo] = useState<{ orderId: string; newStatus: Order['status'] } | null>(null);
+
+  const openConfirmationModal = (orderId: string, newStatus: Order['status']) => {
+    // ไม่ต้องเปิด modal ถ้าสถานะเป็นสถานะปัจจุบันอยู่แล้ว
+    if (allOrders[orderId]?.status === newStatus) return;
+    setStatusUpdateInfo({ orderId, newStatus });
+  };
+
+  const closeConfirmationModal = () => {
+    setStatusUpdateInfo(null);
+  };
+
+  const handleConfirmUpdate = () => {
+    if (statusUpdateInfo) {
+      handleUpdateStatus(statusUpdateInfo.orderId, statusUpdateInfo.newStatus);
+      closeConfirmationModal();
+    }
+  };
+  // ========== END: ส่วนที่เพิ่มเข้ามาสำหรับ Popup ยืนยัน ==========
 
   const handleUpdateStatus = (orderId: string, newStatus: Order['status']) => {
     setAllOrders(prevAllOrders => ({
@@ -118,7 +136,6 @@ export default function OrderPage() {
     [orders, searchTerm, selectedStatus]
   );
 
-
   // --- Pagination Logic ---
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
 
@@ -137,7 +154,6 @@ export default function OrderPage() {
       setViewingOrder(allOrders[viewingOrder.id]);
     }
   }, [allOrders, viewingOrder]);
-
 
   const startIdx = (page - 1) * pageSize;
   const endIdx = startIdx + pageSize;
@@ -216,7 +232,9 @@ export default function OrderPage() {
                           <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-40">
                             {ALL_STATUSES.map(status => (
                                 <li key={status}>
-                                    <a onClick={() => handleUpdateStatus(o.id, status)} className={o.status === status ? 'font-bold' : ''}>
+                                    {/* ========== START: ส่วนที่แก้ไข onClick ========== */}
+                                    <a onClick={() => openConfirmationModal(o.id, status)} className={o.status === status ? 'font-bold' : ''}>
+                                    {/* ========== END: ส่วนที่แก้ไข onClick ========== */}
                                         {status}
                                     </a>
                                 </li>
@@ -332,6 +350,24 @@ export default function OrderPage() {
                 <button>close</button>
             </form>
         </dialog>
+
+        {/* ========== START: Modal สำหรับยืนยันการเปลี่ยนสถานะ ========== */}
+        <dialog className="modal" open={!!statusUpdateInfo}>
+            <div className="modal-box">
+                <h3 className="font-bold text-lg">ยืนยันการเปลี่ยนแปลงสถานะ</h3>
+                <p className="py-4">
+                    คุณต้องการเปลี่ยนสถานะของออเดอร์ <span className="font-mono">{statusUpdateInfo ? allOrders[statusUpdateInfo.orderId]?.orderNumber : ''}</span> เป็น <span className={`badge ${getStatusBadgeClass(statusUpdateInfo?.newStatus || 'รอดำเนินการ')}`}>{statusUpdateInfo?.newStatus}</span> ใช่หรือไม่?
+                </p>
+                <div className="modal-action">
+                    <button className="btn" onClick={closeConfirmationModal}>ยกเลิก</button>
+                    <button className="btn btn-primary" onClick={handleConfirmUpdate}>ยืนยัน</button>
+                </div>
+            </div>
+            <form method="dialog" className="modal-backdrop" onClick={closeConfirmationModal}>
+                <button>close</button>
+            </form>
+        </dialog>
+        {/* ========== END: Modal สำหรับยืนยันการเปลี่ยนสถานะ ========== */}
     </main>
   );
 }
