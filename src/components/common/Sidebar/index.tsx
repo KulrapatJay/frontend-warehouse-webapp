@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,6 +76,13 @@ export default function Sidebar() {
     logout();
     router.push("/login");
   }, [logout, router]);
+
+  const visibleNavItems = useMemo(() => {
+    return NAV_ITEMS.filter(item => {
+      if (!item.roles) return true; // Show if no role restriction
+      return user?.role && item.roles.includes(user.role);
+    });
+  }, [user?.role]);
 
   const handleThemeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

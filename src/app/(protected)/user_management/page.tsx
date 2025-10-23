@@ -2,21 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
-import EditUserModal from "@/components/forms/EditUserForm";
+import EditUserForm, { UpdateUserPayload } from "@/components/forms/EditUserForm";
 import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
-// ========== START: ส่วนที่แก้ไข (1. Import Icon) ==========
 import { FaPlus } from "react-icons/fa";
-// ========== END: ส่วนที่แก้ไข (1. Import Icon) ==========
 import toast from "react-hot-toast";
-import { User as userMock } from "@/mock/user";
-import { Prefix } from "@/mock/prefixs";
 import Link from "next/link";
 import axios from "axios";
-import toast from "react-hot-toast";
-import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
-
-import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
-import EditUserForm, {UpdateUserPayload,} from "@/components/forms/EditUserForm";
 import { useTheme } from "@/contexts/ThemeContext";
 
 // --- Type Definitions ---
@@ -107,13 +98,17 @@ export default function UserManagement() {
       ),
     [searchTerm, users]
   );
+  
   useEffect(() => {
     setPage(1);
   }, [searchTerm, pageSize]);
+  
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
+  
   const startIdx = (page - 1) * pageSize;
   const endIdx = startIdx + pageSize;
   const pagedUsers = filteredUsers.slice(startIdx, endIdx);
@@ -133,9 +128,15 @@ export default function UserManagement() {
 
   const handleSaveChanges = (payload: UpdateUserPayload) => {
     console.log("Payload ส่งไป backend:", payload);
-    const promise = axios.put(`/api/user-management/${payload.id}`, payload);
+    
     if (!payload.id && editingUser?.id) payload.id = editingUser.id;
-    if (!payload.id) { toast.error("ไม่พบรหัสผู้ใช้ (id)"); return; }
+    if (!payload.id) { 
+      toast.error("ไม่พบรหัสผู้ใช้ (id)"); 
+      return; 
+    }
+
+    const promise = axios.put(`/api/user-management/${payload.id}`, payload);
+    
     toast.promise(promise, {
       loading: "กำลังบันทึกการเปลี่ยนแปลง...",
       success: (response) => {
@@ -171,13 +172,13 @@ export default function UserManagement() {
     setToDelete(null);
   };
 
-
   if (loading)
     return (
       <div className="flex justify-center items-center h-[50vh]">
         <span className="loading loading-spinner loading-lg"></span>
       </div>
     );
+    
   if (error) return <div className="p-6 text-center text-error">{error}</div>;
 
   return (
@@ -199,7 +200,6 @@ export default function UserManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {/* ========== START: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
             <Link href="/user_management/add_user">
               <button
                 className={`btn rounded-md text-white transition whitespace-nowrap ${
@@ -210,7 +210,6 @@ export default function UserManagement() {
                 เพิ่มผู้ใช้
               </button>
             </Link>
-            {/* ========== END: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
           </div>
         </div>
 
@@ -226,7 +225,7 @@ export default function UserManagement() {
                 <th className="p-3">ชื่อ</th>
                 <th className="p-3">นามสกุล</th>
                 <th className="p-3">รหัสพนักงาน</th>
-                <th className="p-3">ตำเเหน่ง</th>
+                <th className="p-3">ตำแหน่ง</th>
                 <th className="p-3">ชื่อผู้ใช้</th>
                 <th className="p-3">เข้าสู่ระบบล่าสุด</th>
                 <th className="p-3">อัพเดทล่าสุด</th>
@@ -255,7 +254,7 @@ export default function UserManagement() {
                       className="btn btn-success btn-sm gap-1 text-white"
                       onClick={() => handleOpenEditModal(user)}
                     >
-                      <MdOutlineModeEditOutline /> เเก้ไข
+                      <MdOutlineModeEditOutline /> แก้ไข
                     </button>
                     <button
                       className="btn btn-error btn-sm gap-1 text-white"
@@ -280,7 +279,7 @@ export default function UserManagement() {
         {/* Footer and Pagination */}
         <div className="mt-6 flex items-center justify-between gap-4 text-sm">
           <div className="opacity-70">
-            กำลังเเสดง{" "}
+            กำลังแสดง{" "}
             <span className="font-semibold">
               {filteredUsers.length ? startIdx + 1 : 0}
             </span>
