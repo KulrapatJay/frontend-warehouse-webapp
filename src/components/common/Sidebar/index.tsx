@@ -11,7 +11,7 @@ import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
 import { MdOutlineDashboard } from "react-icons/md";
-import { TbReportSearch } from "react-icons/tb";
+import { TbReportSearch, TbShoppingCart} from "react-icons/tb";
 import { LuCircleUserRound } from "react-icons/lu";
 import { PiUsers } from "react-icons/pi";
 
@@ -35,6 +35,7 @@ type LinkItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "แดชบอร์ด", Icon: MdOutlineDashboard },
   { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
+  { href: "/order", label: "ออเดอร์", Icon: TbShoppingCart },
   { href: "/user_management", label: "จัดการผู้ใช้", Icon: LuCircleUserRound, roles: ['admin'] },
   { href: "/product_management", label: "จัดการสินค้า", Icon: LuBox, roles: ['manager'] },
 ];
