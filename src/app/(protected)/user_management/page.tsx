@@ -1,6 +1,15 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import ConfirmDeleteModal from "@/components/ui/ConfirmDeleteModal";
+import EditUserModal from "@/components/forms/EditUserForm";
+import { MdOutlineModeEditOutline, MdOutlineDelete } from "react-icons/md";
+// ========== START: ส่วนที่แก้ไข (1. Import Icon) ==========
+import { FaPlus } from "react-icons/fa";
+// ========== END: ส่วนที่แก้ไข (1. Import Icon) ==========
+import toast from "react-hot-toast";
+import { User as userMock } from "@/mock/user";
+import { Prefix } from "@/mock/prefixs";
 import Link from "next/link";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -190,11 +199,18 @@ export default function UserManagement() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Link href="user_management/add_user">
-              <button className={`btn btn-primary text-white`}>
-                + เพิ่มผู้ใช้
+            {/* ========== START: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
+            <Link href="/user_management/add_user">
+              <button
+                className={`btn rounded-md text-white transition whitespace-nowrap ${
+                  theme === "dark" ? "bg-blue-600 hover:bg-blue-700" : "bg-black hover:bg-gray-800"
+                }`}
+              >
+                <FaPlus />
+                เพิ่มผู้ใช้
               </button>
             </Link>
+            {/* ========== END: ส่วนที่แก้ไข (2. Button Style & Content) ========== */}
           </div>
         </div>
 
