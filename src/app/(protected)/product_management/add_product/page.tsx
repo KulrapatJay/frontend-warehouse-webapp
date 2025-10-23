@@ -6,20 +6,25 @@ import { TAddProduct, addProductSchema } from "@/lib/validators";
 import { useState, useRef, useEffect } from "react";
 import { FaUpload } from "react-icons/fa";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation"
 
-async function addProduct(data: TAddProduct) {
-  console.log("Submitting new product:", data);
-  const toastId = toast.loading("กำลังบันทึกสินค้า...");
+type Option = { id: number; name: string };
+type CategoryDTO = { id: number; category_name: string };
+type UnitDTO = { id: number; unit_name: string };
 
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  toast.success("สินค้าถูกเพิ่มเรียบร้อยแล้ว!", { id: toastId });
+async function fetchOptions<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json() as Promise<T>;
 }
 
 export default function AddProductPage() {
+  const router = useRouter();
   const [preview, setPreview] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<TAddProduct | null>(null);
+  const [categories, setCategories] = useState<Option[]>([]);
+  const [units, setUnits] = useState<Option[]>([]);
   const modalRef = useRef<HTMLDialogElement>(null);
 
   const {
@@ -30,19 +35,29 @@ export default function AddProductPage() {
     formState: { errors, isSubmitting },
   } = useForm<TAddProduct>({
     resolver: zodResolver(addProductSchema),
-    defaultValues: {
-      price: 0,
-      qty: 0,
-      imageFile: null,
-    },
+    defaultValues: { price: 0, qty: 0, imageFile: null },
   });
 
   useEffect(() => {
-    if (isModalOpen) {
-      modalRef.current?.showModal();
-    } else {
-      modalRef.current?.close();
-    }
+    (async () => {
+      try {
+        const [catRes, unitRes] = await Promise.all([
+          fetchOptions<CategoryDTO[]>("/api/products/categories"),
+          fetchOptions<UnitDTO[]>("/api/products/units"),
+        ]);
+
+        setCategories(catRes.map((c) => ({ id: c.id, name: c.category_name })));
+        setUnits(unitRes.map((u) => ({ id: u.id, name: u.unit_name })));
+      } catch (e) {
+        console.error(e);
+        toast.error("โหลดหมวดหมู่/หน่วย ไม่สำเร็จ");
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) modalRef.current?.showModal();
+    else modalRef.current?.close();
   }, [isModalOpen]);
 
   const onValidSubmit = (data: TAddProduct) => {
@@ -51,17 +66,41 @@ export default function AddProductPage() {
   };
 
   const handleConfirmSubmit = async () => {
-    if (formData) {
-      await addProduct(formData);
+    if (!formData) return;
+    const toastId = toast.loading("กำลังบันทึกสินค้า...");
+
+    try {
+      const fd = new FormData();
+      fd.append("product_name", formData.name);
+      fd.append("sku", formData.code);
+      fd.append("category_id", String(formData.category));
+      fd.append("unit_id", String(formData.unit));
+      fd.append("price", String(formData.price));
+      fd.append("quantity", String(formData.qty));
+      if (formData.imageFile) fd.append("image", formData.imageFile);
+
+      const res = await fetch("/api/products", {
+        method: "POST",
+        body: fd, // ห้ามใส่ Content-Type เอง
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "สร้างสินค้าไม่สำเร็จ");
+      }
+
+      toast.success("เพิ่มสินค้าเรียบร้อย!", { id: toastId });
       setFormData(null);
       setIsModalOpen(false);
       setPreview(null);
       reset();
+      router.push("/product_management");
+    } catch (err: unknown) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาด";
+      toast.error(message, { id: toastId });
     }
   };
-
-  const categories = ["Bakery", "Pastry", "Beverage", "Snack"];
-  const units = ["ชิ้น", "กล่อง", "lot", "ชุด"];
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -95,39 +134,24 @@ export default function AddProductPage() {
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="form-control">
-                      <label className="label block">
-                        <span className="label-text mb-2">
-                          รหัสสินค้า (Code)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        {...register("code")}
-                        className={`input input-bordered ${
-                          errors.code ? "input-error" : ""
-                        }`}
-                      />
-                      {errors.code && (
-                        <span className="text-error text-sm mt-1">
-                          {errors.code.message}
-                        </span>
-                      )}
-                    </div>
-                    <div className="form-control">
-                      {/* 1. ปรับ label: เพิ่ม className="mb-2" */}
-                      <label className="label block">
-                        <span className="label-text mb-2">
-                          บาร์โค้ด (Barcode)
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        {...register("barcode")}
-                        className="input input-bordered"
-                      />
-                    </div>
+
+                  <div className="form-control">
+                    <label className="label block">
+                      <span className="label-text mb-2">รหัสสินค้า (SKU)</span>
+                    </label>
+                    <input
+                      type="text"
+                      {...register("code")}
+                      className={`input input-bordered w-full md:w-1/2 ${
+                        errors.code ? "input-error" : ""
+                      }`}
+                      placeholder="เช่น 5555 หรือ SKU-001"
+                    />
+                    {errors.code && (
+                      <span className="text-error text-sm mt-1">
+                        {errors.code.message}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -143,7 +167,7 @@ export default function AddProductPage() {
                       <input
                         type="number"
                         step="0.01"
-                        {...register("price")}
+                        {...register("price", { valueAsNumber: true })}
                         className={`input input-bordered ${
                           errors.price ? "input-error" : ""
                         }`}
@@ -160,7 +184,7 @@ export default function AddProductPage() {
                       </label>
                       <input
                         type="number"
-                        {...register("qty")}
+                        {...register("qty", { valueAsNumber: true })}
                         className={`input input-bordered ${
                           errors.qty ? "input-error" : ""
                         }`}
@@ -176,17 +200,18 @@ export default function AddProductPage() {
                         <span className="label-text">หน่วยนับ</span>
                       </label>
                       <select
-                        {...register("unit")}
+                        {...register("unit", { valueAsNumber: true })}
                         className={`select select-bordered ${
                           errors.unit ? "select-error" : ""
                         }`}
+                        defaultValue=""
                       >
-                        <option disabled selected value="">
+                        <option disabled value="">
                           -- เลือกหน่วย --
                         </option>
                         {units.map((u) => (
-                          <option key={u} value={u}>
-                            {u}
+                          <option key={u.id} value={u.id}>
+                            {u.name}
                           </option>
                         ))}
                       </select>
@@ -208,17 +233,18 @@ export default function AddProductPage() {
                       <span className="label-text">เลือกหมวดหมู่สินค้า</span>
                     </label>
                     <select
-                      {...register("category")}
+                      {...register("category", { valueAsNumber: true })}
                       className={`select select-bordered w-full md:w-1/2 ${
                         errors.category ? "select-error" : ""
                       }`}
+                      defaultValue=""
                     >
-                      <option disabled selected value="">
+                      <option disabled value="">
                         -- เลือกหมวดหมู่ --
                       </option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
                         </option>
                       ))}
                     </select>
@@ -231,7 +257,7 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {/* ... ส่วนของรูปภาพและปุ่ม เหมือนเดิม ... */}
+              {/* อัปโหลดรูป */}
               <div className="lg:col-span-1">
                 <div className="card bg-base-200 p-4 h-full">
                   <h3 className="card-title mb-2">รูปภาพสินค้า</h3>
@@ -258,23 +284,18 @@ export default function AddProductPage() {
                       accept="image/*"
                       className="file-input file-input-bordered w-full mt-4"
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setValue("imageFile", file);
-                          setPreview(URL.createObjectURL(file));
-                        } else {
-                          setValue("imageFile", null);
-                          setPreview(null);
-                        }
+                        const file = e.target.files?.[0] || null;
+                        setValue("imageFile", file);
+                        setPreview(file ? URL.createObjectURL(file) : null);
                       }}
                     />
                     {errors.imageFile && (
                       <span className="text-error text-sm mt-1">
-                        {errors.imageFile.message as string}
+                        {String(errors.imageFile.message)}
                       </span>
                     )}
                     <p className="text-xs opacity-60 mt-2">
-                      ขนาดไฟล์ไม่เกิน 2MB (JPG, PNG, WebP)
+                      ขนาดไฟล์ไม่เกิน 5MB (JPG, PNG, WebP)
                     </p>
                   </div>
                 </div>
@@ -300,10 +321,15 @@ export default function AddProductPage() {
           </form>
         </div>
       </div>
-      <dialog className={`modal ${isModalOpen ? "modal-open" : ""}`}>
+
+      {/* Modal ยืนยัน */}
+      <dialog
+        ref={modalRef}
+        className={`modal ${isModalOpen ? "modal-open" : ""}`}
+      >
         <div className="modal-box">
-          <h3 className="font-bold text-lg">ยืนยันการแก้ไข</h3>
-          <p className="py-4">คุณต้องการบันทึกการเปลี่ยนแปลงนี้ใช่หรือไม่?</p>
+          <h3 className="font-bold text-lg">ยืนยันการบันทึก</h3>
+          <p className="py-4">คุณต้องการบันทึกสินค้านี้ใช่หรือไม่?</p>
           <div className="modal-action">
             <button
               type="button"

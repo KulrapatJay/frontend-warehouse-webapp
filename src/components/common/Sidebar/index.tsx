@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePathname } from "next/navigation";
-
 import { FiLogOut, FiChevronLeft, FiChevronDown, FiMenu } from "react-icons/fi";
 import { LuBox } from "react-icons/lu";
 import { GoHome } from "react-icons/go";
@@ -24,15 +23,20 @@ type NavItem = {
     className?: string;
     "aria-hidden"?: boolean;
   }>;
+  roles?: string[];
 };
 
+type LinkItem = {
+  href: string;
+  label: string;
+  roles?: string[];
+};
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "เเดชบอร์ด", Icon: MdOutlineDashboard },
+  { href: "/dashboard", label: "แดชบอร์ด", Icon: MdOutlineDashboard },
   { href: "/reports", label: "รายงาน", Icon: TbReportSearch },
-  { href: "/order", label: "ออเดอร์", Icon: TbShoppingCart }, 
+  { href: "/order", label: "ออเดอร์", Icon: TbShoppingCart },
 ];
-
 
 const WAREHOUSE_LINKS = [
   { href: "/warehouse/1", label: "คลังสินค้า 1" },
@@ -40,16 +44,19 @@ const WAREHOUSE_LINKS = [
   { href: "/warehouse/3", label: "คลังสินค้า 3" },
 ];
 
-// Staff
-const STAFF_LINKS = [
-  { href: "/staff", label: "สินค้าทั้งหมด" },
-  { href: "/staff/product-outbound", label: "สินค้าออก" },
+const STAFF_LINKS: LinkItem[] = [
+  { href: "/staff", label: "สินค้าทั้งหมด", roles: ["staff", "manager"] },
+  {
+    href: "/staff/product-outbound",
+    label: "สินค้าออก",
+    roles: ["staff", "manager"],
+  },
 ];
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
 
@@ -71,6 +78,36 @@ export default function Sidebar() {
     logout();
     router.push("/login");
   }, [logout, router]);
+
+  const visibleNavItems = useMemo(() => {
+    return NAV_ITEMS.filter((item) => {
+      if (!item.roles) return true; // Show if no role restriction
+      return user?.role && item.roles.includes(user.role);
+    });
+  }, [user?.role]);
+
+  // Filter staff links based on user role
+  const visibleStaffLinks = useMemo(() => {
+    return STAFF_LINKS.filter((link) => {
+      if (!link.roles) return true;
+      return user?.role && link.roles.includes(user.role);
+    });
+  }, [user?.role]);
+
+  // Check if user should see staff section
+  const shouldShowStaffSection = useMemo(() => {
+    return visibleStaffLinks.length > 0;
+  }, [visibleStaffLinks]);
+
+  // Check if user should see user management
+  const shouldShowUserManagement = useMemo(() => {
+    return user?.role === "admin";
+  }, [user?.role]);
+
+  // Check if user should see product management
+  const shouldShowProductManagement = useMemo(() => {
+    return user?.role && ["manager", "staff"].includes(user.role);
+  }, [user?.role]);
 
   const handleThemeChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,7 +156,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {NAV_ITEMS.map(({ href, label, Icon }) => (
+          {visibleNavItems.map(({ href, label, Icon }) => (
             <Link
               key={href}
               href={href}
@@ -186,88 +223,99 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* Staff collapsible group */}
-          <div>
-            <button
-              onClick={onToggleStaff}
-              className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
-                ${
-                  isStaffActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : ""
-                }
-              `}
-              aria-expanded={isStaffOpen}
-              aria-controls="staff-submenu"
-            >
-              <div className="flex items-center">
-                <PiUsers size={20} className="flex-shrink-0" aria-hidden />
-                {!isCollapsed && <span className="ml-3">เจ้าหน้าที่</span>}
-              </div>
-              {!isCollapsed && (
-                <FiChevronDown
-                  className={`transition-transform duration-200 ${
-                    isStaffOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden
-                />
+          {/* Staff collapsible group - Only show if user has access */}
+          {shouldShowStaffSection && (
+            <div>
+              <button
+                onClick={onToggleStaff}
+                className={`flex items-center justify-between w-full p-2 rounded-lg hover:bg-base-200 transition
+                  ${
+                    isStaffActive
+                      ? "bg-primary/10 text-primary font-medium"
+                      : ""
+                  }
+                `}
+                aria-expanded={isStaffOpen}
+                aria-controls="staff-submenu"
+              >
+                <div className="flex items-center">
+                  <PiUsers size={20} className="flex-shrink-0" aria-hidden />
+                  {!isCollapsed && <span className="ml-3">เจ้าหน้าที่</span>}
+                </div>
+                {!isCollapsed && (
+                  <FiChevronDown
+                    className={`transition-transform duration-200 ${
+                      isStaffOpen ? "rotate-180" : ""
+                    }`}
+                    aria-hidden
+                  />
+                )}
+              </button>
+
+              {isStaffOpen && !isCollapsed && (
+                <div id="staff-submenu" className="pl-8 pt-2 space-y-2">
+                  {visibleStaffLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      aria-current={pathname === link.href ? "page" : undefined}
+                      className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
+                        ${
+                          pathname === link.href
+                            ? "bg-primary/10 text-primary font-medium"
+                            : ""
+                        }
+                      `}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
               )}
-            </button>
+            </div>
+          )}
 
-            {isStaffOpen && !isCollapsed && (
-              <div id="staff-submenu" className="pl-8 pt-2 space-y-2">
-                {STAFF_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    aria-current={pathname === link.href ? "page" : undefined}
-                    className={`block w-full text-left p-2 rounded-lg hover:bg-base-200 transition-colors
-                      ${
-                        pathname === link.href
-                          ? "bg-primary/10 text-primary font-medium"
-                          : ""
-                      }
-                    `}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* User Management - Only show for manager and staff */}
+          {shouldShowUserManagement && (
+            <Link
+              href="/user_management"
+              aria-current={
+                pathname === "/user_management" ? "page" : undefined
+              }
+              className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+              ${
+                pathname === "/user_management"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : ""
+              }`}
+            >
+              <LuCircleUserRound
+                size={20}
+                className="flex-shrink-0"
+                aria-hidden
+              />
+              {!isCollapsed && <span className="ml-3">จัดการผู้ใช้</span>}
+            </Link>
+          )}
 
-          <Link
-            href="/user_management"
-            aria-current={pathname === "/user_management" ? "page" : undefined}
-            className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${
-              pathname === "/user_management"
-                ? "bg-primary/10 text-primary font-medium"
-                : ""
-            }`}
-          >
-            <LuCircleUserRound
-              size={20}
-              className="flex-shrink-0"
-              aria-hidden
-            />
-            {!isCollapsed && <span className="ml-3">จัดการผู้ใช้</span>}
-          </Link>
-          <Link
-            href="/product_management"
-            aria-current={
-              pathname === "/product_management" ? "page" : undefined
-            }
-            className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
-            ${
-              pathname === "/product_management"
-                ? "bg-primary/10 text-primary font-medium"
-                : ""
-            }`}
-          >
-            <LuBox size={20} className="flex-shrink-0" aria-hidden />
-            {!isCollapsed && <span className="ml-3">จัดการสินค้า</span>}
-          </Link>
+          {/* Product Management - Only show for manager and staff */}
+          {shouldShowProductManagement && (
+            <Link
+              href="/product_management"
+              aria-current={
+                pathname === "/product_management" ? "page" : undefined
+              }
+              className={`flex items-center p-2 rounded-lg hover:bg-base-200 transition
+              ${
+                pathname === "/product_management"
+                  ? "bg-primary/10 text-primary font-medium"
+                  : ""
+              }`}
+            >
+              <LuBox size={20} className="flex-shrink-0" aria-hidden />
+              {!isCollapsed && <span className="ml-3">จัดการสินค้า</span>}
+            </Link>
+          )}
         </nav>
 
         {/* Footer controls */}
@@ -357,7 +405,9 @@ export default function Sidebar() {
             className="flex items-center w-full p-2 rounded-lg hover:bg-base-200 text-error active:opacity-80 transition-colors duration-150"
           >
             <FiLogOut size={20} className="flex-shrink-0" aria-hidden />
-            {!isCollapsed && <span className="ml-3 font-medium">ออกจากระบบ</span>}
+            {!isCollapsed && (
+              <span className="ml-3 font-medium">ออกจากระบบ</span>
+            )}
           </button>
         </div>
       </div>

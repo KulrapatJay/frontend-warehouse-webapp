@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -8,9 +7,8 @@ import { loginSchema, TLoginSchema } from "@/lib/validators";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { motion } from "motion/react"
-import { User } from "@/mock/user";
-import { Role } from "@/mock/roles";
 import { useAuth } from "@/contexts/AuthContext";
+import axios, { isAxiosError } from "axios";
 
 
 export default function LoginForm() {
@@ -18,31 +16,31 @@ export default function LoginForm() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth(); 
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const {
+const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<TLoginSchema>({
     resolver: zodResolver(loginSchema),
   });
-
+  // --- ส่วนที่แก้ไข 2: อัปเดตฟังก์ชัน onSubmit ---
   const onSubmit = async (data: TLoginSchema) => {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
     setLoginError(null);
-    const result = User.find(
-      (u) => u.username === data.username && u.password === data.password
-    )
-    if (!result) {
-      setLoginError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-    } else if (result) {
-    const role = Role.find((r) => r.id === result.role_id);
-      login({
-        username: result.username,
-        role: role ? role.role_name : "unknown",
-        name: `${result.first_name} ${result.last_name}`,
-      });
+    setIsNavigating(true);
+    try {
+      const response = await axios.post("/api/auth/login", data);
+      login(response.data.user);
       router.push("/dashboard");
+     } catch (error) {
+      if (isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+        setLoginError(errorMessage);
+      } else {
+        setLoginError("เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง");
+      }
+      setIsNavigating(false);
     }
   };
 
@@ -99,10 +97,10 @@ export default function LoginForm() {
 
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isNavigating}
           className="w-full !mt-4"
         >
-          {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+          {isSubmitting || isNavigating ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
         </Button>
       </form>
     </motion.div>

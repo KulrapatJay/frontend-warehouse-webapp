@@ -1,158 +1,191 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+
+type Option = { id: number; name: string };
 
 export type ProductForm = {
-  code: string;
-  name: string;
-  category: string;
-  price: number;
-  qty: number;
-  unit: string;
-  date: string;
-  barcode?: string;
+  code: string; // sku
+  name: string; // product_name
+  category: number; // category_id
+  price: number; // price
+  qty: number; // quantity
+  unit: number; // unit_id
   imageFile?: FileList;
 };
-export type Product = Omit<ProductForm, "imageFile"> & { id: string };
 
-const DEMO: Record<string, Product> = {
-  p01: {
-    id: "p01",
-    code: "abc1111",
-    name: "เค้กช็อกโกแลต",
-    category: "Bakery",
-    price: 100,
-    qty: 300,
-    unit: "ชิ้น",
-    date: "2025-01-15",
-    barcode: "8851234567890",
-  },
-  p02: {
-    id: "p02",
-    code: "abc2222",
-    name: "ขนมปังกระเทียม",
-    category: "Bakery",
-    price: 150,
-    qty: 200,
-    unit: "ชิ้น",
-    date: "2025-02-05",
-    barcode: "8852345678901",
-  },
-  p03: {
-    id: "p03",
-    code: "abc3333",
-    name: "ครัวซองต์",
-    category: "Pastry",
-    price: 150,
-    qty: 251,
-    unit: "ชิ้น",
-    date: "2025-02-17",
-    barcode: "8853456789012",
-  },
+type ProductAPI = {
+  id: number;
+  product_name: string;
+  sku: string;
+  category_id: number;
+  unit_id: number;
+  price: number;
+  quantity: number;
+  image_url?: string | null;
+  created_at?: string;
 };
 
-async function fetchProductById(id: string): Promise<Product | null> {
-  await new Promise((r) => setTimeout(r, 150));
-  return DEMO[id] ?? null;
-}
-
-async function updateProduct(id: string, payload: ProductForm) {
-  const fd = new FormData();
-  Object.entries(payload).forEach(([k, v]) => {
-    if (k === "imageFile") {
-      if (v instanceof File) fd.append("image", v);
-    } else if (v !== undefined && v !== null) {
-      fd.append(k, String(v));
-    }
-  });
-  console.log("SUBMIT", id, [...fd.entries()]);
-  await new Promise((r) => setTimeout(r, 1000));
-  return { ok: true } as const;
+async function fetchJSON<T>(url: string): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Fetch error:", res.status, text);
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
 }
 
 export default function EditProductClient({ id }: { id: string }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<ProductForm | null>(null);
+  const router = useRouter();
+
+  const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [categories, setCategories] = useState<Option[]>([]);
+  const [units, setUnits] = useState<Option[]>([]);
 
   const form = useForm<ProductForm>({
     defaultValues: {
       code: "",
       name: "",
-      category: "",
+      category: 0,
       price: 0,
       qty: 0,
-      unit: "ชิ้น",
-      date: new Date().toISOString().slice(0, 10),
-      barcode: "",
+      unit: 0,
       imageFile: undefined,
     },
     mode: "onTouched",
   });
 
-  const imageFile = form.watch("imageFile");
-
+  // โหลดหมวดหมู่/หน่วย
   useEffect(() => {
     (async () => {
-      setLoading(true);
-      const p = await fetchProductById(id);
-      if (!p) {
+      try {
+        const [cats, uns] = await Promise.all([
+          fetchJSON<Array<{ id: number; category_name: string }>>(
+            "/api/products/categories"
+          ),
+          fetchJSON<Array<{ id: number; unit_name: string }>>(
+            "/api/products/units"
+          ),
+        ]);
+        setCategories(cats.map((c) => ({ id: c.id, name: c.category_name })));
+        setUnits(uns.map((u) => ({ id: u.id, name: u.unit_name })));
+      } catch (e) {
+        console.error(e);
+        toast.error("โหลดหมวดหมู่/หน่วยไม่สำเร็จ");
+      }
+    })();
+  }, []);
+
+  const imageFile = form.watch("imageFile");
+
+  // โหลดข้อมูลสินค้าจริง
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await fetchJSON<ProductAPI>(`/api/products/${id}`);
+
+        // เติมค่าเริ่มต้นให้ฟอร์ม (RHF จะคุมค่า select ให้ตรงกับ id ที่ตั้งไว้)
+        form.reset({
+          code: data.sku,
+          name: data.product_name,
+          category: data.category_id,
+          price: data.price,
+          qty: data.quantity,
+          unit: data.unit_id,
+          imageFile: undefined,
+        });
+
+        // พรีวิวรูปจาก backend
+        if (data.image_url) {
+          const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+          setPreview(`${base}${data.image_url}`);
+        } else {
+          setPreview(null);
+        }
+
+        setLoading(false);
+      } catch (e) {
+        console.error(e);
         setNotFound(true);
         setLoading(false);
-        return;
       }
-      form.reset({ ...p, imageFile: undefined });
-      setLoading(false);
     })();
   }, [id, form]);
 
+  // preview รูปใหม่เมื่อเลือกไฟล์
   useEffect(() => {
     const file = imageFile && imageFile.length > 0 ? imageFile[0] : null;
-    if (file) {
-      const newPreview = URL.createObjectURL(file);
-      setPreview(newPreview);
-      return () => URL.revokeObjectURL(newPreview);
-    } else {
-      setPreview(null);
-    }
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
   }, [imageFile]);
 
-  function onValidSubmit(values: ProductForm) {
-    setFormData(values);
+  function onValidSubmit() {
     setIsModalOpen(true);
   }
 
+  // ส่งอัปเดต (รองรับรูป) → PUT /api/products/:id
   async function handleConfirmSubmit() {
-    if (!formData) return;
-
     const toastId = toast.loading("กำลังบันทึกข้อมูล...");
-
     try {
-      const res = await updateProduct(id, formData);
-      if (res.ok) {
-        toast.success("บันทึกสำเร็จ!", { id: toastId });
-      } else {
-        throw new Error("Server error");
+      const values = form.getValues();
+
+      const fd = new FormData();
+      fd.append("product_name", values.name);
+      fd.append("sku", values.code);
+      fd.append("category_id", String(values.category));
+      fd.append("unit_id", String(values.unit));
+      fd.append("price", String(values.price));
+      fd.append("quantity", String(values.qty));
+      if (values.imageFile && values.imageFile.length > 0) {
+        fd.append("image", values.imageFile[0]);
       }
-    } catch (error) {
-      toast.error("เกิดข้อผิดพลาดในการบันทึก", { id: toastId });
+
+      const res = await fetch(`/api/products/${id}`, {
+        method: "PUT",
+        body: fd, // อย่าตั้ง Content-Type เอง ให้ browser ใส่ boundary ให้
+      });
+
+      const data: unknown = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg =
+          data &&
+          typeof data === "object" &&
+          "message" in data &&
+          typeof (data as { message: unknown }).message === "string"
+            ? (data as { message: string }).message
+            : "อัปเดตสินค้าไม่สำเร็จ";
+
+        throw new Error(msg);
+      }
+
+      toast.success("บันทึกสำเร็จ!", { id: toastId });
+      router.push("/product_management");
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึก";
+      toast.error(msg, { id: toastId });
     } finally {
       setIsModalOpen(false);
-      setFormData(null);
     }
   }
 
   return (
     <div className="bg-base-100 rounded-lg shadow-md p-6 max-w-4xl mx-auto">
       <div className="mb-6 pb-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold">แก้ไขสินค้า</h1>
-          <p className="text-sm opacity-70">รหัสสินค้า: {id}</p>
-        </div>
+        <h1 className="text-2xl font-bold">แก้ไขสินค้า</h1>
+        <p className="text-sm opacity-70">รหัสสินค้า: {id}</p>
       </div>
 
       {loading ? (
@@ -166,13 +199,14 @@ export default function EditProductClient({ id }: { id: string }) {
         <>
           <form onSubmit={form.handleSubmit(onValidSubmit)}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+              {/* ซ้าย: รูปภาพ */}
               <div className="md:col-span-1">
                 <div className="flex flex-col items-start gap-3">
                   <label className="label-text font-medium mb-1">
                     รูปภาพสินค้า
                   </label>
                   <div className="avatar">
-                    <div className="mask mask-squircle w-40 h-40">
+                    <div className="mask mask-squircle w-40 h-40 bg-base-200">
                       <img src={preview || "/placeholder.png"} alt="preview" />
                     </div>
                   </div>
@@ -180,14 +214,13 @@ export default function EditProductClient({ id }: { id: string }) {
                     type="file"
                     accept="image/*"
                     className="file-input file-input-bordered w-full max-w-xs"
-                    // --- [3] ลบ onChange ออก และปรับ validate ---
                     {...form.register("imageFile", {
                       validate: {
-                        lessThan2MB: (files) =>
+                        lessThan5MB: (files) =>
                           !files ||
                           files.length === 0 ||
-                          files[0].size <= 2 * 1024 * 1024 ||
-                          "ไฟล์ต้องไม่เกิน 2MB",
+                          files[0].size <= 5 * 1024 * 1024 ||
+                          "ไฟล์ต้องไม่เกิน 5MB",
                         acceptedFormats: (files) =>
                           !files ||
                           files.length === 0 ||
@@ -199,17 +232,19 @@ export default function EditProductClient({ id }: { id: string }) {
                     })}
                   />
                   <span className="text-error text-sm h-5">
-                    {form.formState.errors.imageFile?.message}
+                    {form.formState.errors.imageFile?.message?.toString()}
                   </span>
                 </div>
               </div>
 
+              {/* ขวา: ฟอร์มข้อมูล */}
               <div className="md:col-span-2 space-y-6">
-                {/* ... ส่วนที่เหลือของฟอร์มเหมือนเดิม ... */}
+                {/* ข้อมูลหลัก */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-b pb-6">
                   <h3 className="md:col-span-2 text-lg font-semibold mb-2">
                     ข้อมูลหลัก
                   </h3>
+
                   <label className="form-control">
                     <div className="label">
                       <span className="label-text">ชื่อสินค้า</span>
@@ -224,33 +259,37 @@ export default function EditProductClient({ id }: { id: string }) {
                       {form.formState.errors.name?.message}
                     </span>
                   </label>
+
                   <label className="form-control">
                     <div className="label">
-                      <span className="label-text">รหัส (Code)</span>
+                      <span className="label-text">SKU</span>
                     </div>
                     <input
                       className="input input-bordered"
-                      {...form.register("code", {
-                        required: "กรุณากรอกรหัสสินค้า",
-                      })}
+                      {...form.register("code", { required: "กรุณากรอก SKU" })}
                     />
                     <span className="text-error text-sm h-5">
                       {form.formState.errors.code?.message}
                     </span>
                   </label>
+
                   <label className="form-control">
                     <div className="label">
-                      <span className="label-text">ประเภท</span>
+                      <span className="label-text">หมวดหมู่</span>
                     </div>
                     <select
                       className="select select-bordered"
                       {...form.register("category", {
-                        required: "กรุณาเลือกประเภท",
+                        valueAsNumber: true,
+                        required: "กรุณาเลือกหมวดหมู่",
                       })}
                     >
-                      {["เบเกอรี่", "เพสทรี", "เครื่องดื่ม", "ของว่าง"].map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                      <option disabled value={0}>
+                        -- เลือกหมวดหมู่ --
+                      </option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
                         </option>
                       ))}
                     </select>
@@ -260,10 +299,12 @@ export default function EditProductClient({ id }: { id: string }) {
                   </label>
                 </div>
 
+                {/* สต็อกและราคา */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b pb-6">
                   <h3 className="md:col-span-3 text-lg font-semibold mb-2">
                     สต็อกและราคา
                   </h3>
+
                   <label className="form-control">
                     <div className="label">
                       <span className="label-text">ราคา</span>
@@ -273,15 +314,16 @@ export default function EditProductClient({ id }: { id: string }) {
                       step="0.01"
                       className="input input-bordered"
                       {...form.register("price", {
-                        required: "กรุณากรอกราคา",
                         valueAsNumber: true,
-                        min: { value: 0, message: "ราคาต้องไม่ติดลบ" },
+                        required: "กรุณากรอกราคา",
+                        min: { value: 0, message: "ราคา ≥ 0" },
                       })}
                     />
                     <span className="text-error text-sm h-5">
                       {form.formState.errors.price?.message}
                     </span>
                   </label>
+
                   <label className="form-control">
                     <div className="label">
                       <span className="label-text">จำนวน</span>
@@ -290,17 +332,18 @@ export default function EditProductClient({ id }: { id: string }) {
                       type="number"
                       className="input input-bordered"
                       {...form.register("qty", {
-                        required: "กรุณากรอกจำนวน",
                         valueAsNumber: true,
-                        min: { value: 0, message: "จำนวนต้องไม่ติดลบ" },
-                        validate: (value) =>
-                          Number.isInteger(value) || "จำนวนต้องเป็นจำนวนเต็ม",
+                        required: "กรุณากรอกจำนวน",
+                        min: { value: 0, message: "จำนวน ≥ 0" },
+                        validate: (v) =>
+                          Number.isInteger(v) || "ต้องเป็นจำนวนเต็ม",
                       })}
                     />
                     <span className="text-error text-sm h-5">
                       {form.formState.errors.qty?.message}
                     </span>
                   </label>
+
                   <label className="form-control">
                     <div className="label">
                       <span className="label-text">หน่วยนับ</span>
@@ -308,47 +351,21 @@ export default function EditProductClient({ id }: { id: string }) {
                     <select
                       className="select select-bordered"
                       {...form.register("unit", {
+                        valueAsNumber: true,
                         required: "กรุณาเลือกหน่วย",
                       })}
                     >
-                      {["ชิ้น", "กล่อง", "lot", "ชุด"].map((u) => (
-                        <option key={u} value={u}>
-                          {u}
+                      <option disabled value={0}>
+                        -- เลือกหน่วย --
+                      </option>
+                      {units.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
                         </option>
                       ))}
                     </select>
                     <span className="text-error text-sm h-5">
                       {form.formState.errors.unit?.message}
-                    </span>
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <h3 className="md:col-span-2 text-lg font-semibold mb-2">
-                    ข้อมูลอื่นๆ
-                  </h3>
-                  <label className="form-control">
-                    <div className="label">
-                      <span className="label-text">บาร์โค้ด</span>
-                    </div>
-                    <input
-                      className="input input-bordered"
-                      {...form.register("barcode")}
-                    />
-                  </label>
-                  <label className="form-control">
-                    <div className="label">
-                      <span className="label-text">วันที่</span>
-                    </div>
-                    <input
-                      type="date"
-                      className="input input-bordered"
-                      {...form.register("date", {
-                        required: "กรุณาเลือกวันที่",
-                      })}
-                    />
-                    <span className="text-error text-sm h-5">
-                      {form.formState.errors.date?.message}
                     </span>
                   </label>
                 </div>
@@ -373,6 +390,7 @@ export default function EditProductClient({ id }: { id: string }) {
             </div>
           </form>
 
+          {/* Modal ยืนยัน */}
           <dialog className={`modal ${isModalOpen ? "modal-open" : ""}`}>
             <div className="modal-box">
               <h3 className="font-bold text-lg">ยืนยันการแก้ไข</h3>
@@ -394,7 +412,7 @@ export default function EditProductClient({ id }: { id: string }) {
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting && (
-                    <span className="loading loading-spinner"></span>
+                    <span className="loading loading-spinner" />
                   )}
                   ยืนยัน
                 </button>
