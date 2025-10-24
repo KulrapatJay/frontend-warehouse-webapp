@@ -35,3 +35,16 @@ export const addProductSchema = z.object({
 
 });
 export type TAddProduct = z.infer<typeof addProductSchema>;
+
+export const addItemSchema = z.object({
+  product_id: z.coerce.number().int().positive("กรุณาเลือกสินค้า"),
+  sku: z.string().min(1, "กรุณากรอก SKU"),
+  warehouse_id: z.coerce.number().int().positive("กรุณาเลือกคลังสินค้า"),
+  quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
+  production_date: z.string().nonempty("กรุณาเลือกวันที่ผลิต"),
+  expiry_date: z.string().nonempty("กรุณาเลือกวันหมดอายุ"),
+}).refine(data => data.expiry_date >= data.production_date, {
+  message: "วันหมดอายุต้องไม่ก่อนวันที่ผลิต",
+  path: ["expiry_date"],
+});
+export type TAddItemSchema = z.infer<typeof addItemSchema>;

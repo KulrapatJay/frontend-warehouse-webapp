@@ -6,7 +6,7 @@ const publicRoutes = ['/login'];
 
 const roleBasedRoutes: Record<string, string[]> = {
   '/user_management': ['admin'],
-  '/product_management': ['staff', 'manager'],
+  '/product_management': ['manager'],
   '/staff': ['staff', 'manager'],
 };
 

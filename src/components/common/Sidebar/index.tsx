@@ -106,7 +106,7 @@ export default function Sidebar() {
 
   // Check if user should see product management
   const shouldShowProductManagement = useMemo(() => {
-    return user?.role && ["manager", "staff"].includes(user.role);
+    return user?.role === "manager";
   }, [user?.role]);
 
   const handleThemeChange = useCallback(
