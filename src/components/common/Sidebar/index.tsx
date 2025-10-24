@@ -133,7 +133,7 @@ export default function Sidebar() {
         >
           {!isCollapsed && (
             <Image
-              src="/assets/images/Bee Choice PNG -02.png"
+              src="/assets/images/Bee_Choice_PNG_02.png"
               alt="Company Logo"
               width={80}
               height={80}
