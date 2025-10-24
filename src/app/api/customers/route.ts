@@ -1,27 +1,40 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('token')?.value;
+    const token = request.cookies.get("token")?.value;
     if (!token) {
-      return NextResponse.json({ message: 'Authentication required' }, { status: 401 });
+      return NextResponse.json(
+        { message: "Authentication required" },
+        { status: 401 }
+      );
     }
 
     const backendApiUrl = `${process.env.BACKEND_API_URL}/api/customers`;
 
     const apiResponse = await fetch(backendApiUrl, {
-      method: 'GET',
-      headers: { 'Cookie': `token=${token}` },
+      method: "GET",
+      headers: {
+        Cookie: `token=${token}`,
+      },
     });
 
     const data = await apiResponse.json();
 
     if (!apiResponse.ok) {
-      return NextResponse.json({ message: data.message || 'Failed to fetch customers' }, { status: apiResponse.status });
+      return NextResponse.json(
+        { message: data.message || "Failed to fetch customers" },
+        { status: apiResponse.status }
+      );
     }
-    return NextResponse.json(data, { status: 200 });
+
+    return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    console.error("API Route Error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
