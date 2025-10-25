@@ -151,7 +151,6 @@ export default function ProductOutboundPage() {
     const newItems = new Map(scannedItems);
     
     if (newQuantity > 0 && newQuantity <= product.quantity) {
-      // แปลง price เป็น number และจัดการกรณีที่เป็น string หรือ undefined
       const price = typeof product.product.price === 'string' 
         ? parseFloat(product.product.price) 
         : (product.product.price || 0);
@@ -166,7 +165,7 @@ export default function ProductOutboundPage() {
         price: price, // ใช้ราคาที่แปลงแล้ว
       });
 
-      console.log('Product price:', product.product.price, 'Converted price:', price); // Debug log
+      console.log('Product price:', product.product.price, 'Converted price:', price); 
     } else if (newQuantity === 0) {
       newItems.delete(productId);
     }
@@ -204,9 +203,8 @@ export default function ProductOutboundPage() {
     setSkuInput('');
   };
   
+  // ปรับปุ่ม "คลิกเพื่อสแกน Barcode" ให้เป็นเพียงการเปิดโหมดสแกน
   const handleInitialScanClick = () => {
-    setIsScanningMode(true);
-
     if (!selectedWarehouse || products.length === 0) {
       toast.error('ไม่มีสินค้าที่พร้อมเบิกในคลังนี้');
       return;
@@ -218,14 +216,8 @@ export default function ProductOutboundPage() {
       return;
     }
 
-    const randomProduct = availableProducts[Math.floor(Math.random() * availableProducts.length)];
-    const existingItem = scannedItems.get(randomProduct.id);
-    const currentQty = existingItem?.quantity || 0;
-    
-    if (currentQty < randomProduct.quantity) {
-      updateItemQuantity(randomProduct.id, currentQty + 1);
-      toast.success(`เพิ่ม ${randomProduct.product.product_name} แล้ว`);
-    }
+    setIsScanningMode(true);
+    toast.success('เข้าสู่โหมดสแกน กรุณาสแกน SKU ได้เลย');
   };
 
   const handleSubmit = async () => {
@@ -257,6 +249,13 @@ export default function ProductOutboundPage() {
       });
 
       toast.success('บันทึกการเบิกสินค้าสำเร็จ!');
+      
+      // ปิด popup และรีเซ็ตข้อมูล
+      const modalCheckbox = document.getElementById('confirm-modal') as HTMLInputElement;
+      if (modalCheckbox) {
+        modalCheckbox.checked = false;
+      }
+      
       handleReset();
       
     } catch (error: unknown) {
@@ -435,6 +434,22 @@ export default function ProductOutboundPage() {
             )}
           </div>
           
+          {/* หมายเหตุ (ย้ายมาอยู่ก่อนแถบเครื่องมือสแกน) */}
+          {scannedItems.size > 0 && (
+            <div className="mb-4">
+              <label className="label">
+                <span className="label-text">หมายเหตุ (ไม่บังคับ)</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered w-full"
+                placeholder="เพิ่มหมายเหตุสำหรับการเบิกสินค้านี้..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
+
           {/* แถบเครื่องมือสแกนจะแสดงเมื่อเข้าสู่ "โหมดสแกน" หรือเมื่อมีของแล้ว */}
           {selectedWarehouse && (isScanningMode || scannedItems.size > 0) && (
             <div className="flex items-center gap-2 my-4 p-4 bg-base-200 rounded-lg">
@@ -455,22 +470,6 @@ export default function ProductOutboundPage() {
                 <FaBarcode className="mr-2" />
                 เพิ่มสินค้า
               </button>
-            </div>
-          )}
-
-          {/* หมายเหตุ */}
-          {scannedItems.size > 0 && (
-            <div className="mb-4">
-              <label className="label">
-                <span className="label-text">หมายเหตุ (ไม่บังคับ)</span>
-              </label>
-              <textarea
-                className="textarea textarea-bordered w-full"
-                placeholder="เพิ่มหมายเหตุสำหรับการเบิกสินค้านี้..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
             </div>
           )}
 

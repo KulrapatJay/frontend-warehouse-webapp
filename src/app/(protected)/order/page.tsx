@@ -4,8 +4,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { FaEllipsisV, FaFileInvoice } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
-// --- Type Definitions & Data ---
+// --- Type Definitions ---
 type Order = {
   id: string;
   orderNumber: string;
@@ -13,7 +15,8 @@ type Order = {
   orderDate: string;
   totalAmount: number;
   itemCount: number;
-  status: 'รอดำเนินการ' | 'กำลังจัดส่ง' | 'จัดส่งสำเร็จ' | 'ยกเลิก';
+  status: string;
+  creatorName: string; // เพิ่มชื่อผู้รับผิดชอบ
 };
 
 type ProductInOrder = {
@@ -26,17 +29,63 @@ type OrderDetail = Order & {
   items: ProductInOrder[];
 };
 
-const DEMO_ORDER_DETAILS: { [key: string]: OrderDetail } = {
-  'o01': { id: 'o01', orderNumber: 'ORD-2568001', customerName: 'สมชาย ใจดี', orderDate: '2568-10-15', totalAmount: 565, itemCount: 3, status: 'จัดส่งสำเร็จ', items: [ { name: 'เค้กช็อกโกแลต', qty: 2, price: 250 }, { name: 'ครัวซองต์', qty: 1, price: 65 } ] },
-  'o02': { id: 'o02', orderNumber: 'ORD-2568002', customerName: 'สมหญิง มุ่งมั่น', orderDate: '2568-10-16', totalAmount: 160, itemCount: 2, status: 'กำลังจัดส่ง', items: [ { name: 'ขนมปังกระเทียม', qty: 2, price: 80 } ] },
-  'o03': { id: 'o03', orderNumber: 'ORD-2568003', customerName: 'กวินทร์ ตั้งใจ', orderDate: '2568-10-16', totalAmount: 220, itemCount: 1, status: 'รอดำเนินการ', items: [ { name: 'เค้กส้ม', qty: 1, price: 220 } ] },
-  'o04': { id: 'o04', orderNumber: 'ORD-2568004', customerName: 'มานี มีนา', orderDate: '2568-10-14', totalAmount: 690, itemCount: 5, status: 'ยกเลิก', items: [ { name: 'มาการองเซ็ต', qty: 3, price: 180 }, { name: 'เอแคลร์', qty: 2, price: 75 } ] },
-  'o05': { id: 'o05', orderNumber: 'ORD-2568005', customerName: 'ปิติ ยินดี', orderDate: '2568-10-17', totalAmount: 180, itemCount: 2, status: 'รอดำเนินการ', items: [ { name: 'บราวนี่', qty: 2, price: 90 } ] },
-  'o06': { id: 'o06', orderNumber: 'ORD-2568006', customerName: 'วีระ มานะ', orderDate: '2568-10-17', totalAmount: 785, itemCount: 8, status: 'จัดส่งสำเร็จ', items: [ { name: 'คัพเค้ก', qty: 5, price: 85 }, { name: 'ทาร์ตผลไม้', qty: 3, price: 120 } ] },
+// API Response Types
+type ApiSalesOrder = {
+  id: number;
+  order_no: string;
+  order_date: string;
+  total_amount: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  customer: {
+    id: number;
+    customer_code: string;
+    name: string;
+    phone: string;
+  };
+  status: {
+    id: number;
+    status_name: string;
+    description: string;
+  };
+  creator: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    prefix: {
+      name: string;
+    };
+  };
+  items: Array<{
+    id: number;
+    quantity: number;
+    unit_price: string;
+    product: {
+      id: number;
+      product_name: string;
+      sku: string;
+      category: {
+        category_name: string;
+      };
+    };
+  }>;
 };
 
+type ApiStatus = {
+  id: number;
+  status_name: string;
+  description: string;
+};
+
+// สถานะที่อนุญาตให้แสดงในระบบ
+const ALLOWED_STATUSES = ['รอดำเนินการ', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ', 'ยกเลิก'];
+
+// สถานะที่ไม่สามารถเปลี่ยนแปลงได้อีก (สถานะสุดท้าย)
+const FINAL_STATUSES = ['จัดส่งสำเร็จ', 'ยกเลิก'];
+
 // --- Helper Functions ---
-const getStatusBadgeClass = (status: Order['status']) => {
+const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'จัดส่งสำเร็จ': return 'badge-success';
     case 'กำลังจัดส่ง': return 'badge-info';
@@ -51,8 +100,33 @@ const fPrice = (n: number) =>
 
 const formatDateDisplay = (dateString: string) => {
   if (!dateString) return '';
-  const [year, month, day] = dateString.split('-');
-  return `${day}/${month}/${year}`;
+  const date = new Date(dateString);
+  return date.toLocaleDateString('th-TH', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
+// Transform API data to internal format
+const transformApiOrderToOrder = (apiOrder: ApiSalesOrder): OrderDetail => {
+  const items: ProductInOrder[] = apiOrder.items.map(item => ({
+    name: item.product.product_name,
+    qty: item.quantity,
+    price: parseFloat(item.unit_price)
+  }));
+
+  return {
+    id: apiOrder.id.toString(),
+    orderNumber: apiOrder.order_no,
+    customerName: apiOrder.customer.name,
+    orderDate: apiOrder.order_date,
+    totalAmount: parseFloat(apiOrder.total_amount),
+    itemCount: apiOrder.items.reduce((sum, item) => sum + item.quantity, 0),
+    status: apiOrder.status.status_name,
+    creatorName: `${apiOrder.creator.prefix.name}${apiOrder.creator.first_name} ${apiOrder.creator.last_name}`, // สร้างชื่อเต็ม
+    items: items
+  };
 };
 
 export function filterOrders(
@@ -64,7 +138,8 @@ export function filterOrders(
   return list.filter((order) => {
     const matchSearch =
       order.customerName.toLowerCase().includes(term) ||
-      order.orderNumber.toLowerCase().includes(term);
+      order.orderNumber.toLowerCase().includes(term) ||
+      order.creatorName.toLowerCase().includes(term); // เพิ่มการค้นหาจากชื่อผู้รับผิดชอบ
     const matchStatus = status === "all" || order.status === status;
     return matchSearch && matchStatus;
   });
@@ -76,7 +151,9 @@ export default function OrderPage() {
   const router = useRouter();
 
   // --- State ---
-  const [allOrders, setAllOrders] = useState<{ [key: string]: OrderDetail }>(DEMO_ORDER_DETAILS);
+  const [allOrders, setAllOrders] = useState<{ [key: string]: OrderDetail }>({});
+  const [availableStatuses, setAvailableStatuses] = useState<ApiStatus[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -86,40 +163,111 @@ export default function OrderPage() {
   const [viewingOrder, setViewingOrder] = useState<OrderDetail | null>(null);
   
   // ========== START: ส่วนที่เพิ่มเข้ามาสำหรับ Popup ยืนยัน ==========
-  const [statusUpdateInfo, setStatusUpdateInfo] = useState<{ orderId: string; newStatus: Order['status'] } | null>(null);
+  const [statusUpdateInfo, setStatusUpdateInfo] = useState<{ orderId: string; newStatus: string; statusId: number } | null>(null);
 
-  const openConfirmationModal = (orderId: string, newStatus: Order['status']) => {
+  const openConfirmationModal = (orderId: string, newStatus: string, statusId: number) => {
     // ไม่ต้องเปิด modal ถ้าสถานะเป็นสถานะปัจจุบันอยู่แล้ว
     if (allOrders[orderId]?.status === newStatus) return;
-    setStatusUpdateInfo({ orderId, newStatus });
+    setStatusUpdateInfo({ orderId, newStatus, statusId });
   };
 
   const closeConfirmationModal = () => {
     setStatusUpdateInfo(null);
   };
 
-  const handleConfirmUpdate = () => {
+  const handleConfirmUpdate = async () => {
     if (statusUpdateInfo) {
-      handleUpdateStatus(statusUpdateInfo.orderId, statusUpdateInfo.newStatus);
+      await handleUpdateStatus(statusUpdateInfo.orderId, statusUpdateInfo.newStatus, statusUpdateInfo.statusId);
       closeConfirmationModal();
     }
   };
-  // ========== END: ส่วนที่เพิ่มเข้ามาสำหรับ Popup ยืนยัน ==========
 
-  const handleUpdateStatus = (orderId: string, newStatus: Order['status']) => {
-    setAllOrders(prevAllOrders => ({
-      ...prevAllOrders,
-      [orderId]: {
-        ...prevAllOrders[orderId],
-        status: newStatus,
+  // Fetch orders from API
+// Fetch orders from API
+const fetchOrders = async () => {
+  try {
+    setLoading(true);
+    const [ordersResponse, statusResponse] = await Promise.all([
+      axios.get('/api/sales-orders'),
+      axios.get('/api/sales-orders/status')
+    ]);
+    const apiOrders: ApiSalesOrder[] = ordersResponse.data;
+    const statusData: { data: ApiStatus[] } = statusResponse.data;
+    const sortedApiOrders = apiOrders.sort((a, b) => {
+      const dateA = new Date(a.order_date).getTime();
+      const dateB = new Date(b.order_date).getTime();
+      return dateB - dateA; 
+    });
+    
+    const transformedOrders: { [key: string]: OrderDetail } = {};
+    sortedApiOrders.forEach(apiOrder => {
+      const order = transformApiOrderToOrder(apiOrder);
+      transformedOrders[order.id] = order;
+    });
+    
+    setAllOrders(transformedOrders);
+    const filteredStatuses = statusData.data.filter(status => 
+      ALLOWED_STATUSES.includes(status.status_name)
+    );
+    setAvailableStatuses(filteredStatuses);
+  } catch (error) {
+    console.error('Failed to fetch data:', error);
+    toast.error('ไม่สามารถดึงข้อมูลได้');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Update order status via API
+  const handleUpdateStatus = async (orderId: string, newStatus: string, statusId: number) => {
+    try {
+      await axios.put(`/api/sales-orders/${orderId}`, {
+        status_id: statusId
+      });
+
+      // Update local state
+      setAllOrders(prevAllOrders => ({
+        ...prevAllOrders,
+        [orderId]: {
+          ...prevAllOrders[orderId],
+          status: newStatus,
+        }
+      }));
+
+      toast.success('อัปเดตสถานะออเดอร์สำเร็จ');
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status;
+        const errorMessage = error.response?.data?.message || error.message;
+        
+        if (statusCode === 400) {
+          // ข้อความที่เข้าใจง่ายสำหรับ business logic error
+          toast.error('ไม่สามารถเปลี่ยนสถานะได้ เนื่องจากออเดอร์อยู่ในสถานะสุดท้ายแล้ว');
+        } else {
+          toast.error(`เกิดข้อผิดพลาด: ${errorMessage}`);
+        }
+      } else {
+        toast.error('ไม่สามารถอัปเดตสถานะออเดอร์ได้');
       }
-    }));
+    }
   };
-  
-  const ALL_STATUSES: Order['status'][] = ['รอดำเนินการ', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ', 'ยกเลิก'];
+
+  // Fetch orders on component mount
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   // --- Calculations ---
-  const orders = useMemo(() => Object.values(allOrders).map(({ items, ...order }) => order), [allOrders]);
+    const orders = useMemo(() => {
+    const orderList = Object.values(allOrders).map(({ items, ...order }) => order);
+    return orderList.sort((a, b) => {
+      const dateA = new Date(a.orderDate).getTime();
+      const dateB = new Date(b.orderDate).getTime();
+      return dateB - dateA; 
+    });
+  }, [allOrders]);
 
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(o => o.status === 'รอดำเนินการ').length;
@@ -170,6 +318,15 @@ export default function OrderPage() {
     year: 'numeric',
   }).format(today);
 
+  // Loading state
+  if (loading) {
+    return (
+      <main className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </main>
+    );
+  }
+
   return (
     <main>
       <div>
@@ -191,7 +348,7 @@ export default function OrderPage() {
                 </span>
               </span>
               <div className="flex items-center gap-2">
-                <input type="text" placeholder="ค้นหาเลขที่, ชื่อลูกค้า..." className="input input-bordered w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input type="text" placeholder="ค้นหาเลขที่, ชื่อลูกค้า, ผู้รับผิดชอบ..." className="input input-bordered w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 <select className="select select-bordered" value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)}>
                   {statuses.map((s) => (<option key={s} value={s}>{s === "all" ? "สถานะทั้งหมด" : s}</option>))}
                 </select>
@@ -205,6 +362,7 @@ export default function OrderPage() {
                   <tr>
                     <th className="p-4">เลขที่ออเดอร์</th>
                     <th className="p-4">ชื่อลูกค้า</th>
+                    <th className="p-4">ผู้รับผิดชอบ</th>
                     <th className="p-4">วันที่สั่ง</th>
                     <th className="p-4 text-right">จำนวนสินค้า</th>
                     <th className="p-4 text-right">ยอดรวม</th>
@@ -216,8 +374,9 @@ export default function OrderPage() {
                 <tbody>
                   {paginatedOrders.map((o) => (
                     <tr key={o.id} className="hover border-b">
-                      <td className="p-4 font-mono">{o.orderNumber}</td>
+                      <td className="p-4 font-mono text-sm">{o.orderNumber}</td>
                       <td className="p-4">{o.customerName}</td>
+                      <td className="p-4">{o.creatorName}</td>
                       <td className="p-4">{formatDateDisplay(o.orderDate)}</td>
                       <td className="p-4 text-right">{o.itemCount.toLocaleString()} ชิ้น</td>
                       <td className="p-4 text-right">{fPrice(o.totalAmount)}</td>
@@ -227,20 +386,26 @@ export default function OrderPage() {
                         </span>
                       </td>
                       <td className="p-4 text-center">
-                        <div className="dropdown dropdown-left">
-                          <label tabIndex={0} className="btn btn-ghost btn-xs m-1"><FaEllipsisV /></label>
-                          <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-40">
-                            {ALL_STATUSES.map(status => (
-                                <li key={status}>
-                                    {/* ========== START: ส่วนที่แก้ไข onClick ========== */}
-                                    <a onClick={() => openConfirmationModal(o.id, status)} className={o.status === status ? 'font-bold' : ''}>
-                                    {/* ========== END: ส่วนที่แก้ไข onClick ========== */}
-                                        {status}
-                                    </a>
-                                </li>
-                            ))}
-                          </ul>
-                        </div>
+                        {FINAL_STATUSES.includes(o.status) ? (
+                          <div className="tooltip" data-tip="ออเดอร์อยู่ในสถานะสุดท้าย ไม่สามารถเปลี่ยนแปลงได้">
+                            <span className="text-gray-400 cursor-help text-xs">
+                              🔒 สิ้นสุด
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="dropdown dropdown-left">
+                            <label tabIndex={0} className="btn btn-ghost btn-xs m-1"><FaEllipsisV /></label>
+                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-40">
+                              {availableStatuses.map(status => (
+                                  <li key={status.id}>
+                                      <a onClick={() => openConfirmationModal(o.id, status.status_name, status.id)} className={o.status === status.status_name ? 'font-bold' : ''}>
+                                          {status.status_name}
+                                      </a>
+                                  </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </td>
                       <td className="p-4 text-center">
                         <button
@@ -295,12 +460,13 @@ export default function OrderPage() {
                 
                 {viewingOrder && (
                     <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                             <div>
                                 <p><span className="font-semibold">ชื่อลูกค้า:</span> {viewingOrder.customerName}</p>
                                 <p><span className="font-semibold">วันที่สั่ง:</span> {formatDateDisplay(viewingOrder.orderDate)}</p>
                             </div>
                             <div>
+                                <p><span className="font-semibold">ผู้รับผิดชอบ:</span> {viewingOrder.creatorName}</p>
                                 <p className="flex items-center gap-2">
                                     <span className="font-semibold">สถานะ:</span>
                                     <span className={`badge ${getStatusBadgeClass(viewingOrder.status)}`}>{viewingOrder.status}</span>
@@ -351,7 +517,7 @@ export default function OrderPage() {
             </form>
         </dialog>
 
-        {/* ========== START: Modal สำหรับยืนยันการเปลี่ยนสถานะ ========== */}
+        {/* Modal สำหรับยืนยันการเปลี่ยนสถานะ */}
         <dialog className="modal" open={!!statusUpdateInfo}>
             <div className="modal-box">
                 <h3 className="font-bold text-lg">ยืนยันการเปลี่ยนแปลงสถานะ</h3>
@@ -367,7 +533,6 @@ export default function OrderPage() {
                 <button>close</button>
             </form>
         </dialog>
-        {/* ========== END: Modal สำหรับยืนยันการเปลี่ยนสถานะ ========== */}
     </main>
   );
 }
