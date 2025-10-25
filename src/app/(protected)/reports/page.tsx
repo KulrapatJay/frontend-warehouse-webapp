@@ -1,22 +1,13 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 import KpiCard from "@/components/reports/KpiCard";
 import ChartCard from "@/components/reports/ChartCard";
 import BarChart from "@/components/reports/BarChart";
 
-/** ========= Mock Data (ไม่เปลี่ยนแปลง) ========= */
-const topMonth: TopProduct[] = [
-  { name: "ครัวซองต์อัลมอนด์", qty: 250, price: 18750 },
-  { name: "ชีสเค้กหน้าไหม้", qty: 180, price: 16200 },
-  { name: "พาย", qty: 320, price: 22400 },
-];
-const topDay: TopProduct[] = [
-  { name: "ขนมปัง", qty: 35, price: 2275 },
-  { name: "เอแคลร์", qty: 50, price: 1750 },
-  { name: "ครัวซองต์เนยสด", qty: 25, price: 1625 },
-];
 type TopProduct = { name: string; qty: number; price: number };
 
 /** ========= UI primitives (ไม่เปลี่ยนแปลง) ========= */
@@ -103,14 +94,17 @@ function CalendarDropdown({ selectedValue, onValueChange }: { selectedValue: Dat
   );
 }
 
-
-/** ========= Page Component ========= */
+/** ========= Page Component (ปรับใช้ข้อมูลจาก API) ========= */
 export default function ReportPage() {
-  const totalMonthTHB = useMemo(() => 15000, []);
-  const ordersToday = 320;
-  const salesTodayTHB = 2800;
-  
   const currentYear = new Date().getFullYear();
+  
+  // Loading state
+  const [loading, setLoading] = useState(false);
+
+  // KPI Data จาก API
+  const [totalMonthTHB, setTotalMonthTHB] = useState(0);
+  const [ordersToday, setOrdersToday] = useState(0);
+  const [salesTodayTHB, setSalesTodayTHB] = useState(0);
 
   // --- State สำหรับข้อมูลรายปี ---
   const [salesSelectedYear, setSalesSelectedYear] = useState(currentYear);
@@ -126,7 +120,102 @@ export default function ReportPage() {
   const [weeklyOrdersSelectedDate, setWeeklyOrdersSelectedDate] = useState(new Date());
   const [weeklyOrdersData, setWeeklyOrdersData] = useState<number[]>([]);
   const [weeklyTopProductsSelectedDate, setWeeklyTopProductsSelectedDate] = useState(new Date());
-  const [weeklyTopProductsData, setWeeklyTopProductsData] = useState<TopProduct[]>(topDay);
+  const [weeklyTopProductsData, setWeeklyTopProductsData] = useState<TopProduct[]>([]);
+
+  // Fetch KPI Data
+  const fetchKPIData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/reports?type=kpi');
+      const data = response.data;
+      
+      setTotalMonthTHB(data.totalMonthSales || 0);
+      setOrdersToday(data.todayOrdersCount || 0);
+      setSalesTodayTHB(data.todaySales || 0);
+    } catch (error) {
+      console.error('Failed to fetch KPI data:', error);
+      toast.error('ไม่สามารถดึงข้อมูล KPI ได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Yearly Data
+  const fetchYearlyData = async (year: number) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/reports?type=yearly&year=${year}`);
+      const data = response.data;
+      
+      if (year === salesSelectedYear) {
+        setYearlySalesData(data.salesByMonth || Array(12).fill(0));
+      }
+      if (year === ordersSelectedYear) {
+        setYearlyOrdersData(data.ordersByMonth || Array(12).fill(0));
+      }
+      if (year === topProductsSelectedYear) {
+        setTopProductsYearData(data.topProducts || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch yearly data:', error);
+      toast.error('ไม่สามารถดึงข้อมูลรายปีได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch Weekly Data
+  const fetchWeeklyData = async (endDate: Date) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/api/reports?type=weekly&endDate=${endDate.toISOString()}`);
+      const data = response.data;
+      
+      if (endDate.getTime() === weeklySalesSelectedDate.getTime()) {
+        setWeeklySalesData(data.salesByWeek || Array(7).fill(0));
+      }
+      if (endDate.getTime() === weeklyOrdersSelectedDate.getTime()) {
+        setWeeklyOrdersData(data.ordersByWeek || Array(7).fill(0));
+      }
+      if (endDate.getTime() === weeklyTopProductsSelectedDate.getTime()) {
+        setWeeklyTopProductsData(data.topProducts || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch weekly data:', error);
+      toast.error('ไม่สามารถดึงข้อมูลรายสัปดาห์ได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // useEffects
+  useEffect(() => {
+    fetchKPIData();
+  }, []);
+
+  useEffect(() => {
+    fetchYearlyData(salesSelectedYear);
+  }, [salesSelectedYear]);
+
+  useEffect(() => {
+    fetchYearlyData(ordersSelectedYear);
+  }, [ordersSelectedYear]);
+
+  useEffect(() => {
+    fetchYearlyData(topProductsSelectedYear);
+  }, [topProductsSelectedYear]);
+
+  useEffect(() => {
+    fetchWeeklyData(weeklySalesSelectedDate);
+  }, [weeklySalesSelectedDate]);
+
+  useEffect(() => {
+    fetchWeeklyData(weeklyOrdersSelectedDate);
+  }, [weeklyOrdersSelectedDate]);
+
+  useEffect(() => {
+    fetchWeeklyData(weeklyTopProductsSelectedDate);
+  }, [weeklyTopProductsSelectedDate]);
 
   const yearOptions = useMemo(() => {
     const options = [];
@@ -137,46 +226,6 @@ export default function ReportPage() {
     }
     return options.reverse();
   }, []);
-  
-  // --- useEffects สำหรับข้อมูลรายปี ---
-  useEffect(() => {
-    setYearlySalesData(Array.from({ length: 12 }, () => Math.floor(Math.random() * 30000) + 20000));
-  }, [salesSelectedYear]);
-  useEffect(() => {
-    setYearlyOrdersData(Array.from({ length: 12 }, () => Math.floor(Math.random() * 250) + 300));
-  }, [ordersSelectedYear]);
-
-  // START: แก้ไขส่วนนี้
-  useEffect(() => {
-    const newData = [...topMonth].sort(() => 0.5 - Math.random()).map(product => {
-        const unitPrice = product.price / product.qty;
-        const newQty = Math.floor(Math.random() * 300) + 50;
-        const newTotalPrice = unitPrice * newQty;
-        return { ...product, qty: newQty, price: newTotalPrice, };
-      });
-    setTopProductsYearData(newData);
-  }, [topProductsSelectedYear]);
-  // END: แก้ไข
-
-  // --- useEffects สำหรับข้อมูลรายสัปดาห์ ---
-  useEffect(() => {
-    setWeeklySalesData(Array.from({ length: 7 }, () => Math.floor(Math.random() * 1500) + 1500));
-  }, [weeklySalesSelectedDate]);
-  useEffect(() => {
-    setWeeklyOrdersData(Array.from({ length: 7 }, () => Math.floor(Math.random() * 20) + 15));
-  }, [weeklyOrdersSelectedDate]);
-
-  // START: แก้ไขส่วนนี้
-  useEffect(() => {
-    const newData = [...topDay].sort(() => 0.5 - Math.random()).map(product => {
-        const unitPrice = product.price / product.qty;
-        const newQty = Math.floor(Math.random() * 50) + 10;
-        const newTotalPrice = unitPrice * newQty;
-        return { ...product, qty: newQty, price: newTotalPrice };
-    });
-    setWeeklyTopProductsData(newData);
-  }, [weeklyTopProductsSelectedDate]);
-  // END: แก้ไข
 
   const createLast7DaysLabels = (endDate: Date) => {
     const labels = [];
@@ -222,6 +271,15 @@ export default function ReportPage() {
     if (!selectedYear) return "";
     return `มกราคม - ธันวาคม ${selectedYear + 543}`;
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
