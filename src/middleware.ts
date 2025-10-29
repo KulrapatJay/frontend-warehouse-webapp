@@ -24,34 +24,47 @@ async function verifyToken(token: string, secret: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  // 1. อนุญาตให้เข้าถึง Public Routes ได้เสมอ
+  
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next();
   }
-  // 2. ตรวจสอบว่ามี Token หรือไม่ (เหมือนเดิม)
+  
   const token = request.cookies.get("token")?.value;
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectedFrom", pathname);
     return NextResponse.redirect(loginUrl);
   }
-  // 3. ตรวจสอบ Role สำหรับหน้าที่ต้องการป้องกัน
-  const requiredRoles = Object.keys(roleBasedRoutes).find((route) =>
+  
+  const requiredRoleRoute = Object.keys(roleBasedRoutes).find((route) =>
     pathname.startsWith(route)
   );
-  if (requiredRoles) {
+  
+  if (requiredRoleRoute) {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       console.error("JWT_SECRET is not defined!");
       return NextResponse.redirect(new URL("/login", request.url));
     }
+    
     const payload = await verifyToken(token, secret);
     const userRole = payload?.role as string;
-    // ถ้าไม่มี payload (token ไม่ถูก) หรือ role ไม่ตรงกับที่กำหนด
-    if (!userRole || !roleBasedRoutes[requiredRoles].includes(userRole)) {
+    
+    if (!userRole || !roleBasedRoutes[requiredRoleRoute].includes(userRole)) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
+  
+  const secret = process.env.JWT_SECRET;
+  if (secret) {
+    const payload = await verifyToken(token, secret);
+    if (!payload) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirectedFrom", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+  
   return NextResponse.next();
 }
 

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { FaBarcode, FaPlus, FaMinus } from 'react-icons/fa';
-import axios from 'axios';
-import toast from 'react-hot-toast';
+import React, { useState, useMemo, useEffect } from "react";
+import { FaBarcode, FaPlus, FaMinus } from "react-icons/fa";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 // --- Type Definitions ---
 type Product = {
@@ -11,7 +11,7 @@ type Product = {
   product: {
     product_name: string;
     sku: string;
-    price: string | number; // รองรับทั้ง string และ number
+    price: string | number;
     category: {
       category_name: string;
     };
@@ -56,13 +56,13 @@ type Warehouse = {
 };
 
 type ScannedItem = {
-  id: number;
-  name: string;
   sku: string;
+  name: string;
   unit: string;
   quantity: number;
   maxQuantity: number;
-  price: number; // เก็บเป็น number
+  price: number;
+  productIds: number[];
 };
 
 export default function ProductOutboundPage() {
@@ -70,12 +70,14 @@ export default function ProductOutboundPage() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
-  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [scannedItems, setScannedItems] = useState<Map<number, ScannedItem>>(new Map());
-  const [skuInput, setSkuInput] = useState('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
+  const [selectedCustomer, setSelectedCustomer] = useState<string>("");
+  const [scannedItems, setScannedItems] = useState<Map<string, ScannedItem>>(
+    new Map()
+  ); // เปลี่ยนเป็น string key
+  const [skuInput, setSkuInput] = useState("");
   const [isScanningMode, setIsScanningMode] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -83,9 +85,9 @@ export default function ProductOutboundPage() {
   const { totalItems, totalPrice } = useMemo(() => {
     let items = 0;
     let price = 0;
-    scannedItems.forEach(item => {
+    scannedItems.forEach((item) => {
       items += item.quantity;
-      price += item.quantity * (item.price || 0); // เพิ่มการตรวจสอบ
+      price += item.quantity * (item.price || 0);
     });
     return { totalItems: items, totalPrice: price };
   }, [scannedItems]);
@@ -95,17 +97,17 @@ export default function ProductOutboundPage() {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        
+
         const [warehousesRes, customersRes] = await Promise.all([
-          axios.get('/api/products/warehouses'),
-          axios.get('/api/customers')
+          axios.get("/api/products/warehouses"),
+          axios.get("/api/customers"),
         ]);
 
         setWarehouses(warehousesRes.data || []);
         setCustomers(customersRes.data || []);
       } catch (error) {
-        console.error('Failed to fetch initial data:', error);
-        toast.error('ไม่สามารถดึงข้อมูลเริ่มต้นได้');
+        console.error("Failed to fetch initial data:", error);
+        toast.error("ไม่สามารถดึงข้อมูลเริ่มต้นได้");
       } finally {
         setLoading(false);
       }
@@ -123,12 +125,14 @@ export default function ProductOutboundPage() {
       }
 
       try {
-        const response = await axios.get(`/api/products-warehouse?warehouse_id=${selectedWarehouse}`);
-        console.log('Products response:', response.data); // Debug log
+        const response = await axios.get(
+          `/api/products-warehouse?warehouse_id=${selectedWarehouse}`
+        );
+        console.log("Products response:", response.data);
         setProducts(response.data || []);
       } catch (error) {
-        console.error('Failed to fetch warehouse products:', error);
-        toast.error('ไม่สามารถดึงข้อมูลสินค้าได้');
+        console.error("Failed to fetch warehouse products:", error);
+        toast.error("ไม่สามารถดึงข้อมูลสินค้าได้");
         setProducts([]);
       }
     };
@@ -138,151 +142,186 @@ export default function ProductOutboundPage() {
 
   const handleWarehouseChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedWarehouse(e.target.value);
-    setSelectedCustomer('');
+    setSelectedCustomer("");
     setScannedItems(new Map());
     setIsScanningMode(false);
-    setNotes('');
+    setNotes("");
   };
 
-  const updateItemQuantity = (productId: number, newQuantity: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    
+  // แก้ไข function นี้ให้รับ sku แทน productId
+  const updateItemQuantity = (sku: string, newQuantity: number) => {
+    const relatedProducts = products.filter(
+      (p) => p.product.sku === sku && new Date(p.expiry_date) > new Date() // กรองเฉพาะที่ยังไม่หมดอายุ
+    );
+    if (relatedProducts.length === 0) return;
+
+    // คำนวณจำนวนสูงสุดที่สามารถเบิกได้ (เฉพาะที่ยังไม่หมดอายุ)
+    const maxQuantity = relatedProducts.reduce(
+      (sum, product) => sum + product.quantity,
+      0
+    );
+
     const newItems = new Map(scannedItems);
-    
-    if (newQuantity > 0 && newQuantity <= product.quantity) {
-      const price = typeof product.product.price === 'string' 
-        ? parseFloat(product.product.price) 
-        : (product.product.price || 0);
 
-      newItems.set(productId, {
-        id: product.id,
-        name: product.product.product_name,
-        sku: product.product.sku,
-        unit: product.product.unit.unit_name,
+    if (newQuantity > 0 && newQuantity <= maxQuantity) {
+      const firstProduct = relatedProducts[0];
+      const price =
+        typeof firstProduct.product.price === "string"
+          ? parseFloat(firstProduct.product.price)
+          : firstProduct.product.price || 0;
+
+      newItems.set(sku, {
+        sku: sku,
+        name: firstProduct.product.product_name,
+        unit: firstProduct.product.unit.unit_name,
         quantity: newQuantity,
-        maxQuantity: product.quantity,
-        price: price, // ใช้ราคาที่แปลงแล้ว
+        maxQuantity: maxQuantity,
+        price: price,
+        productIds: relatedProducts.map((p) => p.id), // เก็บเฉพาะ id ที่ยังไม่หมดอายุ
       });
-
-      console.log('Product price:', product.product.price, 'Converted price:', price); 
     } else if (newQuantity === 0) {
-      newItems.delete(productId);
+      newItems.delete(sku);
     }
     setScannedItems(newItems);
   };
 
   const handleSkuScan = (sku: string) => {
     if (!selectedWarehouse || !sku.trim()) return;
-    
-    const product = products.find(p => 
-      p.product.sku.toLowerCase() === sku.trim().toLowerCase()
+
+    const relatedProducts = products.filter(
+      (p) =>
+        p.product.sku.toLowerCase() === sku.trim().toLowerCase() &&
+        new Date(p.expiry_date) > new Date() // กรองเฉพาะที่ยังไม่หมดอายุ
     );
 
-    if (!product) {
-      toast.error(`ไม่พบสินค้าที่มี SKU Code: ${sku}`);
-      setSkuInput('');
+    if (relatedProducts.length === 0) {
+      // ตรวจสอบว่ามีสินค้า SKU นี้อยู่หรือไม่ (รวมทั้งที่หมดอายุ)
+      const allRelatedProducts = products.filter(
+        (p) => p.product.sku.toLowerCase() === sku.trim().toLowerCase()
+      );
+
+      if (allRelatedProducts.length === 0) {
+        toast.error(`ไม่พบสินค้าที่มี SKU Code: ${sku}`);
+      } else {
+        toast.error(
+          `สินค้า "${allRelatedProducts[0].product.product_name}" หมดอายุแล้ว ไม่สามารถเบิกได้`
+        );
+      }
+      setSkuInput("");
       return;
     }
 
-    if (product.quantity === 0) {
-      toast.error(`สินค้า "${product.product.product_name}" หมดสต็อก ไม่สามารถเบิกได้`);
-      setSkuInput('');
+    const totalAvailable = relatedProducts.reduce(
+      (sum, product) => sum + product.quantity,
+      0
+    );
+
+    if (totalAvailable === 0) {
+      toast.error(
+        `สินค้า "${relatedProducts[0].product.product_name}" หมดสต็อก ไม่สามารถเบิกได้`
+      );
+      setSkuInput("");
       return;
     }
 
-    const existingItem = scannedItems.get(product.id);
+    const existingItem = scannedItems.get(sku);
     const currentQty = existingItem?.quantity || 0;
-    
-    if (currentQty < product.quantity) {
-      updateItemQuantity(product.id, currentQty + 1);
-      toast.success(`เพิ่ม ${product.product.product_name} แล้ว`);
+
+    if (currentQty < totalAvailable) {
+      updateItemQuantity(sku, currentQty + 1);
+      toast.success(`เพิ่ม ${relatedProducts[0].product.product_name} แล้ว`);
     } else {
-      toast.error(`ไม่สามารถเพิ่ม "${product.product.product_name}" ได้อีก เนื่องจากมีในคลังเพียง ${product.quantity} ชิ้น`);
+      toast.error(
+        `ไม่สามารถเพิ่ม "${relatedProducts[0].product.product_name}" ได้อีก เนื่องจากมีในคลังเพียง ${totalAvailable} ชิ้น`
+      );
     }
-    setSkuInput('');
+    setSkuInput("");
   };
-  
-  // ปรับปุ่ม "คลิกเพื่อสแกน Barcode" ให้เป็นเพียงการเปิดโหมดสแกน
+
   const handleInitialScanClick = () => {
     if (!selectedWarehouse || products.length === 0) {
-      toast.error('ไม่มีสินค้าที่พร้อมเบิกในคลังนี้');
+      toast.error("ไม่มีสินค้าที่พร้อมเบิกในคลังนี้");
       return;
     }
 
-    const availableProducts = products.filter(p => p.quantity > 0);
+    // กรองเฉพาะสินค้าที่ยังไม่หมดอายุและมีจำนวนมากกว่า 0
+    const availableProducts = products.filter(
+      (p) => p.quantity > 0 && new Date(p.expiry_date) > new Date()
+    );
+
     if (availableProducts.length === 0) {
-      toast.error('ไม่มีสินค้าที่พร้อมเบิกในคลังนี้');
+      toast.error(
+        "ไม่มีสินค้าที่พร้อมเบิกในคลังนี้ (สินค้าหมดอายุหรือหมดสต็อก)"
+      );
       return;
     }
 
     setIsScanningMode(true);
-    toast.success('เข้าสู่โหมดสแกน กรุณาสแกน SKU ได้เลย');
+    toast.success("เข้าสู่โหมดสแกน กรุณาสแกน SKU ได้เลย");
   };
 
   const handleSubmit = async () => {
     if (!selectedWarehouse || !selectedCustomer || scannedItems.size === 0) {
-      toast.error('กรุณากรอกข้อมูลให้ครบถ้วน');
+      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      // สร้าง payload ตาม API format
-      const items = Array.from(scannedItems.values()).map(item => ({
+      const items = Array.from(scannedItems.values()).map((item) => ({
         sku: item.sku,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
 
       const payload = {
         customer_id: parseInt(selectedCustomer),
         warehouse_id: parseInt(selectedWarehouse),
-        notes: notes.trim() || '', // ค่าว่างถ้าไม่มี notes
-        items: items
+        notes: notes.trim() || "",
+        items: items,
       };
 
-      const response = await axios.post('/api/sales-orders', payload, {
+      const response = await axios.post("/api/sales-orders", payload, {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
-      toast.success('บันทึกการเบิกสินค้าสำเร็จ!');
-      
-      // ปิด popup และรีเซ็ตข้อมูล
-      const modalCheckbox = document.getElementById('confirm-modal') as HTMLInputElement;
+      toast.success("บันทึกการเบิกสินค้าสำเร็จ!");
+
+      const modalCheckbox = document.getElementById(
+        "confirm-modal"
+      ) as HTMLInputElement;
       if (modalCheckbox) {
         modalCheckbox.checked = false;
       }
-      
+
       handleReset();
-      
     } catch (error: unknown) {
-      let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+      let errorMessage = "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
       if (axios.isAxiosError(error)) {
         const data = error.response?.data as { message?: unknown } | undefined;
         const message = data?.message;
-        if (typeof message === 'string') {
+        if (typeof message === "string") {
           errorMessage = message;
-        } else if (typeof error.message === 'string') {
+        } else if (typeof error.message === "string") {
           errorMessage = error.message;
         }
       }
       toast.error(errorMessage);
-      console.error('Submit error:', error);
+      console.error("Submit error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleReset = () => {
-    setSelectedWarehouse('');
-    setSelectedCustomer('');
+    setSelectedWarehouse("");
+    setSelectedCustomer("");
     setScannedItems(new Map());
-    setSkuInput('');
+    setSkuInput("");
     setIsScanningMode(false);
-    setNotes('');
+    setNotes("");
   };
 
   // --- Loading state ---
@@ -300,7 +339,9 @@ export default function ProductOutboundPage() {
     if (!selectedWarehouse) {
       return (
         <div className="text-center py-16 flex flex-col items-center">
-          <h2 className="text-xl text-base-content text-opacity-60">กรุณาเลือกคลังสินค้าเพื่อเริ่มต้น</h2>
+          <h2 className="text-xl text-base-content text-opacity-60">
+            กรุณาเลือกคลังสินค้าเพื่อเริ่มต้น
+          </h2>
         </div>
       );
     }
@@ -322,10 +363,10 @@ export default function ProductOutboundPage() {
               </tr>
             </thead>
             <tbody>
-              {Array.from(scannedItems.values()).map(item => (
-                <tr key={item.id}>
+              {Array.from(scannedItems.values()).map((item) => (
+                <tr key={item.sku}>
                   <td>
-                    <span className='font-mono bg-base-200 px-2 py-1 rounded-md'>
+                    <span className="font-mono bg-base-200 px-2 py-1 rounded-md">
                       {item.sku}
                     </span>
                   </td>
@@ -333,24 +374,34 @@ export default function ProductOutboundPage() {
                   <td>{item.unit}</td>
                   <td className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button 
-                        className="btn btn-xs btn-outline" 
-                        onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
+                      <button
+                        className="btn btn-xs btn-outline"
+                        onClick={() =>
+                          updateItemQuantity(item.sku, item.quantity - 1)
+                        }
                       >
-                        <FaMinus/>
+                        <FaMinus />
                       </button>
-                      <span className="font-semibold w-8 text-center">{item.quantity}</span>
-                      <button 
-                        className="btn btn-xs btn-outline" 
-                        onClick={() => updateItemQuantity(item.id, item.quantity + 1)} 
+                      <span className="font-semibold w-8 text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        className="btn btn-xs btn-outline"
+                        onClick={() =>
+                          updateItemQuantity(item.sku, item.quantity + 1)
+                        }
                         disabled={item.quantity >= item.maxQuantity}
                       >
-                        <FaPlus/>
+                        <FaPlus />
                       </button>
                     </div>
                   </td>
-                  <td className="text-right">฿{(item.price || 0).toLocaleString()}</td>
-                  <td className="text-right font-semibold">฿{(item.quantity * (item.price || 0)).toLocaleString()}</td>
+                  <td className="text-right">
+                    ฿{(item.price || 0).toLocaleString()}
+                  </td>
+                  <td className="text-right font-semibold">
+                    ฿{(item.quantity * (item.price || 0)).toLocaleString()}
+                  </td>
                   <td className="text-center">{item.maxQuantity}</td>
                 </tr>
               ))}
@@ -364,7 +415,9 @@ export default function ProductOutboundPage() {
     if (isScanningMode) {
       return (
         <div className="text-center py-16">
-          <p className="text-gray-500">กรุณาใช้ช่องสแกนด้านบนเพื่อเพิ่มสินค้า</p>
+          <p className="text-gray-500">
+            กรุณาใช้ช่องสแกนด้านบนเพื่อเพิ่มสินค้า
+          </p>
         </div>
       );
     }
@@ -372,7 +425,10 @@ export default function ProductOutboundPage() {
     // State 4: สถานะเริ่มต้น (ยังไม่มีสินค้า และยังไม่เข้าโหมดสแกน)
     return (
       <div className="text-center py-16">
-        <button onClick={handleInitialScanClick} className="btn btn-primary btn-lg">
+        <button
+          onClick={handleInitialScanClick}
+          className="btn btn-primary btn-lg"
+        >
           <FaBarcode className="h-6 w-6 mr-2" />
           คลิกเพื่อสแกน Barcode
         </button>
@@ -387,12 +443,14 @@ export default function ProductOutboundPage() {
           {/* --- ส่วนหัว --- */}
           <div className="flex justify-between items-end mb-6 min-h-[48px]">
             <div className="flex items-center gap-4">
-              <select 
+              <select
                 className="select select-bordered w-full max-w-xs"
                 value={selectedWarehouse}
                 onChange={handleWarehouseChange}
               >
-                <option disabled value="">เลือกคลังสินค้า</option>
+                <option disabled value="">
+                  เลือกคลังสินค้า
+                </option>
                 {warehouses.map((warehouse) => (
                   <option key={warehouse.id} value={warehouse.id}>
                     {warehouse.name}
@@ -401,12 +459,14 @@ export default function ProductOutboundPage() {
               </select>
 
               {selectedWarehouse && (
-                <select 
+                <select
                   className="select select-bordered w-full max-w-xs"
                   value={selectedCustomer}
                   onChange={(e) => setSelectedCustomer(e.target.value)}
                 >
-                  <option disabled value="">เลือกผู้รับสินค้า</option>
+                  <option disabled value="">
+                    เลือกผู้รับสินค้า
+                  </option>
                   {customers.length === 0 ? (
                     <option disabled>กำลังโหลด...</option>
                   ) : (
@@ -419,22 +479,29 @@ export default function ProductOutboundPage() {
                 </select>
               )}
             </div>
-            
+
             {scannedItems.size > 0 && (
               <div className="text-left sm:text-right">
                 <div className="flex flex-col gap-1">
                   <span className="text-lg">
-                    จำนวนรวม: <span className="font-bold text-info">{totalItems.toLocaleString()}</span> ชิ้น
+                    จำนวนรวม:{" "}
+                    <span className="font-bold text-info">
+                      {totalItems.toLocaleString()}
+                    </span>{" "}
+                    ชิ้น
                   </span>
                   <span className="text-xl">
-                    ยอดรวม: <span className="font-bold text-success">฿{totalPrice.toLocaleString()}</span>
+                    ยอดรวม:{" "}
+                    <span className="font-bold text-success">
+                      ฿{totalPrice.toLocaleString()}
+                    </span>
                   </span>
                 </div>
               </div>
             )}
           </div>
-          
-          {/* หมายเหตุ (ย้ายมาอยู่ก่อนแถบเครื่องมือสแกน) */}
+
+          {/* หมายเหตุ */}
           {scannedItems.size > 0 && (
             <div className="mb-4">
               <label className="label">
@@ -450,7 +517,7 @@ export default function ProductOutboundPage() {
             </div>
           )}
 
-          {/* แถบเครื่องมือสแกนจะแสดงเมื่อเข้าสู่ "โหมดสแกน" หรือเมื่อมีของแล้ว */}
+          {/* แถบเครื่องมือสแกน */}
           {selectedWarehouse && (isScanningMode || scannedItems.size > 0) && (
             <div className="flex items-center gap-2 my-4 p-4 bg-base-200 rounded-lg">
               <input
@@ -459,7 +526,9 @@ export default function ProductOutboundPage() {
                 className="input input-bordered w-full max-w-xs"
                 value={skuInput}
                 onChange={(e) => setSkuInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSkuScan(skuInput); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSkuScan(skuInput);
+                }}
                 autoFocus
               />
               <button
@@ -479,10 +548,16 @@ export default function ProductOutboundPage() {
           </div>
 
           <div className="card-actions justify-end mt-6">
-            <label htmlFor="cancel-modal" className="btn btn-ghost">ยกเลิก</label>
-            <label 
-              htmlFor="confirm-modal" 
-              className={`btn btn-primary ${scannedItems.size === 0 || !selectedCustomer ? 'btn-disabled' : ''}`}
+            <label htmlFor="cancel-modal" className="btn btn-ghost">
+              ยกเลิก
+            </label>
+            <label
+              htmlFor="confirm-modal"
+              className={`btn btn-primary ${
+                scannedItems.size === 0 || !selectedCustomer
+                  ? "btn-disabled"
+                  : ""
+              }`}
             >
               บันทึก
             </label>
@@ -497,18 +572,26 @@ export default function ProductOutboundPage() {
           <h3 className="font-bold text-lg">ยืนยันการเบิกสินค้า</h3>
           <div className="py-4">
             <p>คุณต้องการยืนยันการเบิกสินค้าจำนวน {totalItems} ชิ้น</p>
-            <p className="font-semibold text-lg mt-2">ยอดรวม: ฿{totalPrice.toLocaleString()}</p>
+            <p className="font-semibold text-lg mt-2">
+              ยอดรวม: ฿{totalPrice.toLocaleString()}
+            </p>
             {notes.trim() && (
               <div className="mt-2 p-2 bg-base-200 rounded">
-                <p className="text-sm"><strong>หมายเหตุ:</strong> {notes}</p>
+                <p className="text-sm">
+                  <strong>หมายเหตุ:</strong> {notes}
+                </p>
               </div>
             )}
           </div>
           <div className="modal-action">
-            <label htmlFor="confirm-modal" className="btn btn-ghost">ยกเลิก</label>
-            <label 
-              htmlFor={isSubmitting ? undefined : "confirm-modal"} 
-              className={`btn btn-success text-white ${isSubmitting ? 'btn-disabled pointer-events-none' : ''}`} 
+            <label htmlFor="confirm-modal" className="btn btn-ghost">
+              ยกเลิก
+            </label>
+            <label
+              htmlFor={isSubmitting ? undefined : "confirm-modal"}
+              className={`btn btn-success text-white ${
+                isSubmitting ? "btn-disabled pointer-events-none" : ""
+              }`}
               onClick={isSubmitting ? undefined : handleSubmit}
               aria-disabled={isSubmitting}
               role="button"
@@ -516,22 +599,32 @@ export default function ProductOutboundPage() {
               {isSubmitting ? (
                 <span className="loading loading-spinner loading-sm" />
               ) : (
-                'ยืนยัน'
+                "ยืนยัน"
               )}
             </label>
           </div>
         </div>
       </div>
-      
+
       {/* Cancel Modal */}
       <input type="checkbox" id="cancel-modal" className="modal-toggle" />
       <div className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">ยืนยันการยกเลิก</h3>
-          <p className="py-4">ข้อมูลที่สแกนไว้จะถูกลบทั้งหมด คุณต้องการยกเลิกหรือไม่?</p>
+          <p className="py-4">
+            ข้อมูลที่สแกนไว้จะถูกลบทั้งหมด คุณต้องการยกเลิกหรือไม่?
+          </p>
           <div className="modal-action">
-            <label htmlFor="cancel-modal" className="btn btn-ghost">ยกเลิก</label>
-            <label htmlFor="cancel-modal" className="btn btn-error text-white" onClick={handleReset}>ใช่</label>
+            <label htmlFor="cancel-modal" className="btn btn-ghost">
+              ยกเลิก
+            </label>
+            <label
+              htmlFor="cancel-modal"
+              className="btn btn-error text-white"
+              onClick={handleReset}
+            >
+              ใช่
+            </label>
           </div>
         </div>
       </div>

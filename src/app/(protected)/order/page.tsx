@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import toast from "react-hot-toast";
 
-// --- Type Definitions ---
+// Type Definitions
 type Order = {
   id: string;
   orderNumber: string;
@@ -29,7 +29,6 @@ type OrderDetail = Order & {
   items: ProductInOrder[];
 };
 
-// API Response Types
 type ApiSalesOrder = {
   id: number;
   order_no: string;
@@ -82,13 +81,15 @@ type User = {
   id: number;
   first_name: string;
   last_name: string;
+  name?: string;
+  username?: string;
   role: {
-    id: number;
+    id?: number;
     role_name: string;
   };
 };
 
-// สถานะที่อนุญาตให้แสดงในระบบ
+// Constants
 const ALLOWED_STATUSES = [
   "รอดำเนินการ",
   "กำลังจัดส่ง",
@@ -96,13 +97,10 @@ const ALLOWED_STATUSES = [
   "ยกเลิก",
 ];
 
-// สถานะที่ไม่สามารถเปลี่ยนแปลงได้อีก (สถานะสุดท้าย)
 const FINAL_STATUSES = ["จัดส่งสำเร็จ", "ยกเลิก"];
-
-// Role ที่สามารถเปลี่ยนสถานะได้
 const ALLOWED_ROLES = ["staff", "manager"];
 
-// --- Helper Functions ---
+// Helper Functions
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case "จัดส่งสำเร็จ":
@@ -119,9 +117,7 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 const fPrice = (n: number) =>
-  new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(
-    n
-  );
+  new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(n);
 
 const formatDateDisplay = (dateString: string) => {
   if (!dateString) return "";
@@ -133,7 +129,6 @@ const formatDateDisplay = (dateString: string) => {
   });
 };
 
-// Transform API data to internal format
 const transformApiOrderToOrder = (apiOrder: ApiSalesOrder): OrderDetail => {
   const items: ProductInOrder[] = apiOrder.items.map((item) => ({
     name: item.product.product_name,
@@ -154,6 +149,11 @@ const transformApiOrderToOrder = (apiOrder: ApiSalesOrder): OrderDetail => {
   };
 };
 
+const getRoleName = (user: User | null): string | undefined => {
+  if (!user?.role) return undefined;
+  return typeof user.role === "string" ? user.role : user.role.role_name;
+};
+
 export function filterOrders(
   list: Order[],
   searchTerm: string,
@@ -170,18 +170,16 @@ export function filterOrders(
   });
 }
 
-// --- Component ---
 export default function OrderPage() {
   const { theme } = useTheme();
   const router = useRouter();
 
-  // --- State ---
-  const [allOrders, setAllOrders] = useState<{ [key: string]: OrderDetail }>(
-    {}
-  );
+  // State
+  const [allOrders, setAllOrders] = useState<{ [key: string]: OrderDetail }>({});
   const [availableStatuses, setAvailableStatuses] = useState<ApiStatus[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -190,13 +188,13 @@ export default function OrderPage() {
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
   const [viewingOrder, setViewingOrder] = useState<OrderDetail | null>(null);
 
-  // ========== START: ส่วนที่เพิ่มเข้ามาสำหรับ Popup ยืนยัน ==========
   const [statusUpdateInfo, setStatusUpdateInfo] = useState<{
     orderId: string;
     newStatus: string;
     statusId: number;
   } | null>(null);
 
+  // Modal Functions
   const openConfirmationModal = (
     orderId: string,
     newStatus: string,
@@ -221,32 +219,61 @@ export default function OrderPage() {
     }
   };
 
-  // Fetch current user
-  const fetchCurrentUser = async () => {
+  // API Functions
+  const getCurrentUser = async () => {
     try {
-      const response = await axios.get("/api/auth/me");
-      setCurrentUser(response.data);
+      setUserLoading(true);
+      const response = await axios.get("/api/auth/me", { 
+        withCredentials: true 
+      });
+      
+      // Normalize user data structure
+      const rawUser = response.data?.user || response.data;
+      
+      const normalizedUser: User = {
+        id: rawUser.id,
+        first_name: rawUser.first_name || rawUser.name?.split(" ")?.[0] || "",
+        last_name: rawUser.last_name || rawUser.name?.split(" ")?.slice(1).join(" ") || "",
+        name: rawUser.name,
+        username: rawUser.username,
+        role: {
+          id: rawUser.role?.id,
+          role_name: typeof rawUser.role === "string" ? rawUser.role : rawUser.role?.role_name || ""
+        },
+      };
+
+      setCurrentUser(normalizedUser);
     } catch (error) {
-      console.error("Failed to fetch current user:", error);
+      console.error("Failed to get current user:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Middleware will handle redirect
+        return;
+      }
+      toast.error("ไม่สามารถดึงข้อมูลผู้ใช้ได้");
+    } finally {
+      setUserLoading(false);
     }
   };
 
-  // Fetch orders from API
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const [ordersResponse, statusResponse] = await Promise.all([
-        axios.get("/api/sales-orders"),
-        axios.get("/api/sales-orders/status"),
+        axios.get("/api/sales-orders", { withCredentials: true }),
+        axios.get("/api/sales-orders/status", { withCredentials: true }),
       ]);
+
       const apiOrders: ApiSalesOrder[] = ordersResponse.data;
       const statusData: { data: ApiStatus[] } = statusResponse.data;
+
+      // Sort orders by date (newest first)
       const sortedApiOrders = apiOrders.sort((a, b) => {
         const dateA = new Date(a.order_date).getTime();
         const dateB = new Date(b.order_date).getTime();
         return dateB - dateA;
       });
 
+      // Transform API orders to internal format
       const transformedOrders: { [key: string]: OrderDetail } = {};
       sortedApiOrders.forEach((apiOrder) => {
         const order = transformApiOrderToOrder(apiOrder);
@@ -254,33 +281,41 @@ export default function OrderPage() {
       });
 
       setAllOrders(transformedOrders);
+      
+      // Filter available statuses
       const filteredStatuses = statusData.data.filter((status) =>
         ALLOWED_STATUSES.includes(status.status_name)
       );
       setAvailableStatuses(filteredStatuses);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Middleware will handle redirect
+        return;
+      }
       toast.error("ไม่สามารถดึงข้อมูลได้");
     } finally {
       setLoading(false);
     }
   };
 
-  // Update order status via API
   const handleUpdateStatus = async (
     orderId: string,
     newStatus: string,
     statusId: number
   ) => {
     try {
-      await axios.put(`/api/sales-orders/${orderId}`, {
-        status_id: statusId,
-      });
+      await axios.put(
+        `/api/sales-orders/${orderId}`,
+        { status_id: statusId },
+        { withCredentials: true }
+      );
 
-      setAllOrders((prevAllOrders) => ({
-        ...prevAllOrders,
+      // Update local state
+      setAllOrders((prevOrders) => ({
+        ...prevOrders,
         [orderId]: {
-          ...prevAllOrders[orderId],
+          ...prevOrders[orderId],
           status: newStatus,
         },
       }));
@@ -293,10 +328,11 @@ export default function OrderPage() {
         const statusCode = error.response?.status;
         const errorMessage = error.response?.data?.message || error.message;
 
-        if (statusCode === 400) {
-          toast.error(
-            "ไม่สามารถเปลี่ยนสถานะได้ เนื่องจากออเดอร์อยู่ในสถานะสุดท้ายแล้ว"
-          );
+        if (statusCode === 401) {
+          // Middleware will handle redirect
+          return;
+        } else if (statusCode === 400) {
+          toast.error("ไม่สามารถเปลี่ยนสถานะได้ เนื่องจากออเดอร์อยู่ในสถานะสุดท้ายแล้ว");
         } else {
           toast.error(`เกิดข้อผิดพลาด: ${errorMessage}`);
         }
@@ -306,20 +342,17 @@ export default function OrderPage() {
     }
   };
 
-  // ตรวจสอบว่าผู้ใช้สามารถเปลี่ยนสถานะได้หรือไม่
+  // Permission Check
   const canChangeStatus = useMemo(() => {
-    return (
-      currentUser &&
-      ALLOWED_ROLES.includes(currentUser.role.role_name.toLowerCase())
+    const roleName = getRoleName(currentUser);
+    if (!roleName) return false;
+    
+    return ALLOWED_ROLES.some(allowedRole => 
+      allowedRole.toLowerCase() === roleName.toLowerCase()
     );
   }, [currentUser]);
 
-  // Fetch data on component mount
-  useEffect(() => {
-    Promise.all([fetchCurrentUser(), fetchOrders()]);
-  }, []);
-
-  // --- Calculations ---
+  // Data Processing
   const orders = useMemo(() => {
     const orderList = Object.values(allOrders).map(
       ({ items, ...order }) => order
@@ -338,9 +371,9 @@ export default function OrderPage() {
     .reduce((sum, o) => sum + o.totalAmount, 0);
 
   const statuses = useMemo(() => {
-    const set = new Set<string>(["all"]);
-    orders.forEach((o) => set.add(o.status));
-    return Array.from(set);
+    const statusSet = new Set<string>(["all"]);
+    orders.forEach((o) => statusSet.add(o.status));
+    return Array.from(statusSet);
   }, [orders]);
 
   const filteredOrders = useMemo(
@@ -348,15 +381,40 @@ export default function OrderPage() {
     [orders, searchTerm, selectedStatus]
   );
 
-  // --- Pagination Logic ---
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+
+  // Pagination
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const paginatedOrders = filteredOrders.slice(startIdx, endIdx);
+
+  const goto = (p: number) => {
+    setPage(Math.min(Math.max(1, p), totalPages));
+  };
+
+  // Date Formatting
+  const today = new Date();
+  const formattedDate = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(today);
+
+  // Effects
+  useEffect(() => {
+    const initializeData = async () => {
+      await getCurrentUser();
+      await fetchOrders();
+    };
+    initializeData();
+  }, []);
 
   useEffect(() => {
     setPage(1);
   }, [searchTerm, selectedStatus, pageSize]);
 
   useEffect(() => {
-    if (page > totalPages) {
+    if (page > totalPages && totalPages > 0) {
       setPage(totalPages);
     }
   }, [page, totalPages]);
@@ -367,23 +425,8 @@ export default function OrderPage() {
     }
   }, [allOrders, viewingOrder]);
 
-  const startIdx = (page - 1) * pageSize;
-  const endIdx = startIdx + pageSize;
-  const paginatedOrders = filteredOrders.slice(startIdx, endIdx);
-
-  const goto = (p: number) => {
-    setPage(Math.min(Math.max(1, p), totalPages));
-  };
-
-  const today = new Date();
-  const formattedDate = new Intl.DateTimeFormat("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(today);
-
-  // Loading state
-  if (loading) {
+  // Loading State
+  if (loading || userLoading) {
     return (
       <main className="flex justify-center items-center min-h-screen">
         <span className="loading loading-spinner loading-lg"></span>
@@ -414,7 +457,7 @@ export default function OrderPage() {
               <div className="stat-value text-success">
                 {fPrice(totalRevenue)}
               </div>
-              <div className="stat-desc flex justify-between">
+              <div className="stat-desc">
                 <span>(ไม่รวมรายการยกเลิก)</span>
               </div>
             </div>
@@ -433,6 +476,7 @@ export default function OrderPage() {
           </div>
         </div>
 
+        {/* Orders Table Card */}
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
             {/* Control Header */}
@@ -465,7 +509,7 @@ export default function OrderPage() {
               </div>
             </div>
 
-            {/* Table */}
+            {/* Orders Table */}
             <div className="overflow-x-auto">
               <table className="table w-full">
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
@@ -482,31 +526,31 @@ export default function OrderPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedOrders.map((o) => (
-                    <tr key={o.id} className="hover border-b">
-                      <td className="p-4 font-mono text-sm">{o.orderNumber}</td>
-                      <td className="p-4">{o.customerName}</td>
-                      <td className="p-4">{o.creatorName}</td>
-                      <td className="p-4">{formatDateDisplay(o.orderDate)}</td>
+                  {paginatedOrders.map((order) => (
+                    <tr key={order.id} className="hover border-b">
+                      <td className="p-4 font-mono text-sm">{order.orderNumber}</td>
+                      <td className="p-4">{order.customerName}</td>
+                      <td className="p-4">{order.creatorName}</td>
+                      <td className="p-4">{formatDateDisplay(order.orderDate)}</td>
                       <td className="p-4 text-right">
-                        {o.itemCount.toLocaleString()} ชิ้น
+                        {order.itemCount.toLocaleString()} ชิ้น
                       </td>
                       <td className="p-4 text-right">
-                        {fPrice(o.totalAmount)}
+                        {fPrice(order.totalAmount)}
                       </td>
                       <td className="p-4 text-center">
                         <span
                           className={`badge w-28 justify-center ${getStatusBadgeClass(
-                            o.status
+                            order.status
                           )}`}
                         >
-                          {o.status}
+                          {order.status}
                         </span>
                       </td>
                       <td className="p-4 text-center">
                         {!canChangeStatus ? (
-                          <span className="text-gray-400 text-xs">-</span>
-                        ) : FINAL_STATUSES.includes(o.status) ? (
+                          <span className="text-gray-400 text-xs">ไม่มีสิทธิ์</span>
+                        ) : FINAL_STATUSES.includes(order.status) ? (
                           <div
                             className="tooltip"
                             data-tip="ออเดอร์อยู่ในสถานะสุดท้าย ไม่สามารถเปลี่ยนแปลงได้"
@@ -532,13 +576,13 @@ export default function OrderPage() {
                                   <a
                                     onClick={() =>
                                       openConfirmationModal(
-                                        o.id,
+                                        order.id,
                                         status.status_name,
                                         status.id
                                       )
                                     }
                                     className={
-                                      o.status === status.status_name
+                                      order.status === status.status_name
                                         ? "font-bold"
                                         : ""
                                     }
@@ -554,8 +598,8 @@ export default function OrderPage() {
                       <td className="p-4 text-center">
                         <button
                           className="btn btn-ghost btn-sm"
-                          aria-label={`View details for order ${o.orderNumber}`}
-                          onClick={() => setViewingOrder(allOrders[o.id])}
+                          aria-label={`View details for order ${order.orderNumber}`}
+                          onClick={() => setViewingOrder(allOrders[order.id])}
                         >
                           <FaFileInvoice className="h-4 w-4" />
                         </button>
@@ -571,11 +615,11 @@ export default function OrderPage() {
               )}
             </div>
 
-            {/* Footer Section */}
+            {/* Pagination */}
             {filteredOrders.length > 0 && (
               <div className="mt-4 flex items-center justify-between text-sm">
                 <div className="opacity-70">
-                  กำลังเเสดง{" "}
+                  กำลังแสดง{" "}
                   <span className="font-semibold">{startIdx + 1}</span>–
                   <span className="font-semibold">
                     {Math.min(endIdx, filteredOrders.length)}
@@ -634,7 +678,7 @@ export default function OrderPage() {
         </div>
       </div>
 
-      {/* Modal สำหรับดูรายละเอียด */}
+      {/* Order Detail Modal */}
       <dialog className="modal" open={!!viewingOrder}>
         <div className="modal-box max-w-3xl">
           <h3 className="font-bold text-lg mb-1">รายละเอียดออเดอร์</h3>
@@ -644,9 +688,9 @@ export default function OrderPage() {
 
           {viewingOrder && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div>
-                  <p>
+                  <p className="mb-2">
                     <span className="font-semibold">ชื่อลูกค้า:</span>{" "}
                     {viewingOrder.customerName}
                   </p>
@@ -656,7 +700,7 @@ export default function OrderPage() {
                   </p>
                 </div>
                 <div>
-                  <p>
+                  <p className="mb-2">
                     <span className="font-semibold">ผู้รับผิดชอบ:</span>{" "}
                     {viewingOrder.creatorName}
                   </p>
@@ -712,11 +756,9 @@ export default function OrderPage() {
           )}
 
           <div className="modal-action">
-            <form method="dialog">
-              <button className="btn" onClick={() => setViewingOrder(null)}>
-                ปิด
-              </button>
-            </form>
+            <button className="btn" onClick={() => setViewingOrder(null)}>
+              ปิด
+            </button>
           </div>
         </div>
         <form
@@ -724,11 +766,11 @@ export default function OrderPage() {
           className="modal-backdrop"
           onClick={() => setViewingOrder(null)}
         >
-          <button>close</button>
+          <button type="button">close</button>
         </form>
       </dialog>
 
-      {/* Modal สำหรับยืนยันการเปลี่ยนสถานะ */}
+      {/* Status Update Confirmation Modal */}
       <dialog className="modal" open={!!statusUpdateInfo}>
         <div className="modal-box">
           <h3 className="font-bold text-lg">ยืนยันการเปลี่ยนแปลงสถานะ</h3>
@@ -763,7 +805,7 @@ export default function OrderPage() {
           className="modal-backdrop"
           onClick={closeConfirmationModal}
         >
-          <button>close</button>
+          <button type="button">close</button>
         </form>
       </dialog>
     </main>
