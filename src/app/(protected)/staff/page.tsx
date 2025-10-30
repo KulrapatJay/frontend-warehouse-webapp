@@ -39,6 +39,15 @@ type Product = {
   updated_at: string;
 };
 
+// ++ MODIFIED: ประเภทข้อมูลสำหรับสินค้าออก ++
+type InventoryMovement = {
+    quantity_moved: number;
+    source_warehouse?: { // relation จาก backend
+        name: string;
+    };
+};
+
+
 type ApiResponse = {
   success: boolean;
   data: Product[];
@@ -47,46 +56,32 @@ type ApiResponse = {
 
 // --- Helper Functions ---
 const getStatusBadgeClass = (quantity: number, expiryDate: string) => {
-  // เช็คจำนวนสินค้าก่อน
-  if (quantity === 0) return "badge-error"; // สินค้าหมด
-
-  // เช็ควันหมดอายุ
+  if (quantity === 0) return "badge-error";
   const today = new Date();
   const expiry = new Date(expiryDate);
   const daysUntilExpiry = Math.ceil(
     (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
-
-  // ถ้าหมดอายุแล้วหรือใกล้หมดอายุ (< 3 วัน)
-  if (daysUntilExpiry <= 0) return "badge-error"; // หมดอายุแล้ว
-  if (daysUntilExpiry < 3) return "badge-warning"; // ใกล้หมดอายุ (น้อยกว่า 3 วัน)
-  
-  return "badge-success"; // สินค้ายังไม่หมดอายุ (มากกว่า 3 วัน)
+  if (daysUntilExpiry <= 0) return "badge-error";
+  if (daysUntilExpiry < 3) return "badge-warning";
+  return "badge-success";
 };
-
 const getStatus = (quantity: number, expiryDate: string) => {
   if (quantity === 0) return "สินค้าหมด";
-
-  // เช็ควันหมดอายุ
   const today = new Date();
   const expiry = new Date(expiryDate);
   const daysUntilExpiry = Math.ceil(
     (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
-
-  // ถ้าหมดอายุแล้วหรือใกล้หมดอายุ
   if (daysUntilExpiry <= 0) return "สินค้าหมดอายุ";
-  if (daysUntilExpiry < 3) return "ใกล้หมดอายุ"; // น้อยกว่า 3 วัน
-  
-  return "สินค้าปกติ"; // มากกว่าหรือเท่ากับ 3 วัน
+  if (daysUntilExpiry < 3) return "ใกล้หมดอายุ";
+  return "สินค้าปกติ";
 };
-
 const formatDateDisplay = (dateString: string) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("th-TH");
 };
-
 const formatCreatorName = (creator: Product["creator"]) => {
   return `${creator.prefix.name}${creator.first_name} ${creator.last_name}`;
 };
@@ -105,18 +100,18 @@ export function filterProducts(
       product.product.sku.toLowerCase().includes(term) ||
       formatDateDisplay(product.production_date).includes(term) ||
       formatDateDisplay(product.expiry_date).includes(term);
-
     const matchCategory =
       category === "all" || product.product.category.category_name === category;
     const matchWarehouse =
       warehouse === "all" || product.warehouse.name === warehouse;
-
     return matchSearch && matchCategory && matchWarehouse;
   });
 }
 
 export default function StaffAllProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  // ++ ADDED: State สำหรับเก็บข้อมูลสินค้าออก ++
+  const [outboundMovements, setOutboundMovements] = useState<InventoryMovement[]>([]);
   const [categories, setCategories] = useState<string[]>(["all"]);
   const [warehouses, setWarehouses] = useState<string[]>(["all"]);
   const [loading, setLoading] = useState(true);
@@ -138,15 +133,21 @@ useEffect(() => {
       setLoading(true);
 
       // Fetch all data in parallel
-      const [productsResponse, categoriesResponse, warehousesResponse] = await Promise.all([
+      const [productsResponse, categoriesResponse, warehousesResponse, salesOrdersResponse] = await Promise.all([
         axios.get('/api/products-warehouse'),
         axios.get('/api/products/categories'),
         axios.get('/api/products/warehouses'),
+        // ++ MODIFIED: เพิ่ม parameter 'type=movements' เพื่อขอข้อมูลที่ถูกต้อง ++
+        axios.get('/api/sales-orders?type=movements'),
       ]);
 
       // Set products data
       const rawProducts = (productsResponse.data ?? []) as Product[];
       setProducts(rawProducts);
+
+      // Set outbound movements data
+      const rawMovements = (salesOrdersResponse.data ?? []) as InventoryMovement[];
+      setOutboundMovements(rawMovements);
 
       // Set categories from dedicated API
       const categoriesData = categoriesResponse.data || [];
@@ -161,33 +162,10 @@ useEffect(() => {
       setError(null);
     } catch (err) {
       console.error('Failed to fetch data:', err);
-      
-      // Fallback: If APIs fail, extract from products data
-      try {
-        const productsResponse = await axios.get('/api/products-warehouse');
-        const rawProducts = (productsResponse.data ?? []) as Product[];
-        setProducts(rawProducts);
-
-        // Fallback: Extract unique categories from products
-        const uniqueCategories: string[] = Array.from(
-          new Set(rawProducts.map((p) => p.product.category.category_name))
-        );
-        setCategories(['all', ...uniqueCategories]);
-
-        // Fallback: Extract unique warehouses from products
-        const uniqueWarehouses: string[] = Array.from(
-          new Set(rawProducts.map((p) => p.warehouse.name))
-        );
-        setWarehouses(['all', ...uniqueWarehouses]);
-
-        setError(null);
-        toast('ใช้ข้อมูลจากสินค้าแทนการดึงจาก API แยก');
-      } catch (fallbackErr) {
-        setError(
-          fallbackErr instanceof Error ? fallbackErr.message : 'เกิดข้อผิดพลาดในการดึงข้อมูล'
-        );
-        toast.error('ไม่สามารถดึงข้อมูลสินค้าได้');
-      }
+      setError(
+        err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการดึงข้อมูล'
+      );
+      toast.error('ไม่สามารถดึงข้อมูลสินค้าได้');
     } finally {
       setLoading(false);
     }
@@ -206,7 +184,22 @@ useEffect(() => {
     })
     .reduce((sum, p) => sum + p.quantity, 0);
 
-  const totalOutbound = 0; // This would need to come from a different API endpoint
+  // ++ MODIFIED: คำนวณสินค้าออกโดยอิงตาม filter คลังสินค้าที่เลือก ++
+  const totalOutbound = useMemo(() => {
+    // กรองข้อมูล movements ตามคลังสินค้าที่ถูกเลือกใน dropdown
+    const movementsToCalculate =
+      selectedWarehouse === 'all'
+        ? outboundMovements
+        : outboundMovements.filter(
+            (item) => item.source_warehouse?.name === selectedWarehouse
+          );
+
+    // รวมยอดจาก quantity_moved
+    return movementsToCalculate.reduce(
+      (sum, p) => sum + p.quantity_moved,
+      0
+    );
+  }, [outboundMovements, selectedWarehouse]); // คำนวณใหม่เมื่อข้อมูล movements หรือ filter เปลี่ยน
 
   const filteredProducts = useMemo(
     () =>

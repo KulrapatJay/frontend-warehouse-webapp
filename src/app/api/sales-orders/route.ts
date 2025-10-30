@@ -11,7 +11,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const backendApiUrl = `${process.env.BACKEND_API_URL}/api/sales-orders`;
+    // --- จุดที่แก้ไข ---
+    // 1. ดึง query string ทั้งหมด (เช่น "?warehouse_id=1") จาก URL ที่เข้ามา
+    const { search } = new URL(request.url);
+
+    // 2. สร้าง URL ไปยัง Backend โดยเอา query string ทั้งหมดต่อไปด้วย
+    const backendApiUrl = `${process.env.BACKEND_API_URL}/api/sales-orders${search}`;
+    // --- สิ้นสุดการแก้ไข ---
 
     const apiResponse = await fetch(backendApiUrl, {
       method: "GET",

@@ -35,6 +35,11 @@ type Product = {
   updated_at: string;
 };
 
+// ประเภทข้อมูลสำหรับ Inventory Movement ที่ได้จาก API
+type InventoryMovement = {
+  quantity_moved: number;
+};
+
 type WarehouseData = {
   id: number;
   name: string;
@@ -100,26 +105,31 @@ export default function WarehousePage({ params }: WarehousePageProps) {
   const [warehouseData, setWarehouseData] = useState<WarehouseData | null>(
     null
   );
+  // State ใหม่สำหรับเก็บข้อมูลสินค้าออกโดยเฉพาะ
+  const [outgoingMovements, setOutgoingMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   // ========== Fetch Data from API ==========
   useEffect(() => {
-    const fetchWarehouseData = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
 
-        // Fetch products in this warehouse first
-        const productsResponse = await axios.get(
-          `/api/products-warehouse?warehouse_id=${id}`
-        );
+        // เรียก API สองส่วนพร้อมกัน
+        const [productsResponse, movementsResponse] = await Promise.all([
+          axios.get(`/api/products-warehouse?warehouse_id=${id}`),
+          // เรียก API sales-orders พร้อมส่ง warehouse_id ไปด้วย
+          axios.get(`/api/sales-orders?warehouse_id=${id}`) 
+        ]);
+        
         const products = productsResponse.data || [];
+        const movements = movementsResponse.data || [];
+        setOutgoingMovements(movements);
 
         if (products.length > 0) {
-          // ใช้ข้อมูล warehouse จาก product แรก
           const warehouseInfo = products[0].warehouse;
-
           setWarehouseData({
             id: parseInt(id),
             name: warehouseInfo.name,
@@ -127,13 +137,9 @@ export default function WarehousePage({ params }: WarehousePageProps) {
             products: products,
           });
         } else {
-          // ถ้าไม่มีสินค้าในคลัง ลองดึงข้อมูล warehouse
           try {
-            const warehouseResponse = await axios.get(
-              `/api/products/warehouses/${id}`
-            );
+            const warehouseResponse = await axios.get(`/api/products/warehouses/${id}`);
             const warehouse = warehouseResponse.data;
-
             setWarehouseData({
               id: warehouse.id,
               name: warehouse.name,
@@ -141,7 +147,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
               products: [],
             });
           } catch (warehouseError) {
-            setWarehouseData({
+             setWarehouseData({
               id: parseInt(id),
               name: `คลังสินค้า ${id}`,
               location: "",
@@ -150,8 +156,8 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           }
         }
       } catch (error) {
-        console.error("Failed to fetch warehouse data:", error);
-        toast.error("ไม่สามารถดึงข้อมูลคลังสินค้าได้");
+        console.error("Failed to fetch data:", error);
+        toast.error("ไม่สามารถดึงข้อมูลได้");
         setWarehouseData(null);
       } finally {
         setLoading(false);
@@ -159,7 +165,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
     };
 
     if (id) {
-      fetchWarehouseData();
+      fetchAllData();
     }
   }, [id]);
 
@@ -213,7 +219,11 @@ export default function WarehousePage({ params }: WarehousePageProps) {
       })
       .reduce((sum, product) => sum + product.quantity, 0);
 
-    const outgoingTotal = 0; // TODO: เพิ่มการคำนวณสินค้าออกจาก API
+    // แก้ไขส่วน TODO เดิม: คำนวณสินค้าออกจาก state ที่ดึงมาใหม่
+    const outgoingTotal = outgoingMovements.reduce(
+      (sum, item) => sum + item.quantity_moved,
+      0
+    );
 
     return { totalProducts, totalQuantity, incomingToday, outgoingTotal };
   };
@@ -273,7 +283,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
             <div className="stat">
               <div className="stat-title">สินค้าเข้าวันนี้</div>
               <div className="stat-value text-success">
-                {stats.incomingToday}
+                {stats.incomingToday.toLocaleString()}
               </div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
@@ -284,7 +294,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           <div className="stats bg-base-100 shadow">
             <div className="stat">
               <div className="stat-title">สินค้าทั้งหมด</div>
-              <div className="stat-value text-info">{stats.totalQuantity}</div>
+              <div className="stat-value text-info">{stats.totalQuantity.toLocaleString()}</div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
                 <span>{formattedDate}</span>
@@ -294,7 +304,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           <div className="stats bg-base-100 shadow">
             <div className="stat">
               <div className="stat-title">สินค้าออกรวม</div>
-              <div className="stat-value text-error">{stats.outgoingTotal}</div>
+              <div className="stat-value text-error">{stats.outgoingTotal.toLocaleString()}</div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
                 <span>{formattedDate}</span>
