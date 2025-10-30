@@ -21,7 +21,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
           <div className="mb-8 text-center lg:text-left">
             <Image
-              src="/assets/images/Bee Choice PNG -02.png" // 
+              src="/assets/images/Bee_Choice_PNG_02.png" // 
               alt="Company Logo"
               width={80} 
               height={80}

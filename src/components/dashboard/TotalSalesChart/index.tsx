@@ -1,70 +1,142 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-  Title,
-  type ChartOptions,
-  type ChartData,
-  type ScriptableContext,
+  CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend, Title,
+  type ChartOptions, type ChartData, type ScriptableContext,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { useTheme } from "@/contexts/ThemeContext";
+import axios from "axios";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-  Title
-);
+ChartJS.register( CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend, Title );
 
 type TimeRange = 'week' | 'month' | 'year';
 
-// ========== START: ส่วนที่แก้ไข (1. เปลี่ยน $ เป็น ฿) ==========
-const allChartData = {
-  week: {
-    labels: ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."],
-    rawData: [17500, 28000, 22750, 42000, 31500, 52500, 45500],
-    total: "฿239,750",
-    change: "↑ 5.2%",
-    changeColor: "text-success",
-  },
-  month: {
-    labels: ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม"],
-    rawData: [12000, 9500, 18500, 11000, 25000],
-    total: "฿76,000",
-    change: "↑ 36.6%",
-    changeColor: "text-success",
-  },
-  year: {
-    labels: ["2565", "2566", "2567", "2568"],
-    rawData: [180000, 165000, 210000, 250000],
-    total: "฿805,000",
-    change: "↑ 19.0%",
-    changeColor: "text-success",
-  }
-};
-// ========== END: ส่วนที่แก้ไข (1. เปลี่ยน $ เป็น ฿) ==========
+// สร้าง Type เพื่อกำหนดโครงสร้างข้อมูลให้ชัดเจน
+interface ChartDataState {
+  labels: string[];
+  rawData: number[];
+  total: string;
+  change: string;
+  changeColor: string;
+}
 
+interface ApiChartData {
+  week: ChartDataState;
+  month: ChartDataState;
+  year: ChartDataState;
+}
 
 export default function TotalSalesChart() {
   const { theme } = useTheme();
   const chartRef = useRef<ChartJS<"line">>(null);
   
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
-  const currentData = useMemo(() => allChartData[timeRange], [timeRange]);
+  const [loading, setLoading] = useState(true);
 
+  // ใช้ Type ที่สร้างขึ้นกับ useState และกำหนดค่าเริ่มต้น
+  const [apiChartData, setApiChartData] = useState<ApiChartData>({
+    week: {
+      labels: ["จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส.", "อา."],
+      rawData: [],
+      total: "฿0.00",
+      change: "...",
+      changeColor: "text-base-content",
+    },
+    month: {
+      labels: ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."],
+      rawData: [],
+      total: "฿0.00",
+      change: "...",
+      changeColor: "text-base-content",
+    },
+    year: {
+      labels: [],
+      rawData: [],
+      total: "฿0.00",
+      change: "...",
+      changeColor: "text-base-content",
+    }
+  });
+
+  const calculatePercentageChange = (current: number, previous: number) => {
+    if (previous === 0) {
+      if (current > 0) return { change: `↑ 100.0%`, isPositive: true };
+      return { change: `0.0%`, isPositive: true };
+    }
+    const changePercent = ((current - previous) / previous) * 100;
+    const sign = changePercent >= 0 ? "↑" : "↓";
+    return { 
+      change: `${sign} ${Math.abs(changePercent).toFixed(1)}%`, 
+      isPositive: changePercent >= 0 
+    };
+  };
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      setLoading(true);
+      try {
+        if (timeRange === 'month') {
+          const currentYear = new Date().getFullYear();
+          const lastYear = currentYear - 1;
+          const [currentResponse, lastResponse] = await Promise.all([
+            axios.get(`/api/reports?type=yearly&year=${currentYear}`),
+            axios.get(`/api/reports?type=yearly&year=${lastYear}`)
+          ]);
+          const currentData = currentResponse.data;
+          const lastData = lastResponse.data;
+          const salesByMonth = currentData.salesByMonth || Array(12).fill(0);
+          const currentTotal = salesByMonth.reduce((sum: number, val: number) => sum + val, 0);
+          const lastTotal = (lastData.salesByMonth || []).reduce((sum: number, val: number) => sum + val, 0);
+          const percentageChange = calculatePercentageChange(currentTotal, lastTotal);
+          setApiChartData(prev => ({ ...prev, month: {
+            ...prev.month, rawData: salesByMonth, total: `฿${currentTotal.toLocaleString('th-TH')}`,
+            change: percentageChange.change, changeColor: percentageChange.isPositive ? "text-success" : "text-error",
+          }}));
+        } else if (timeRange === 'week') {
+          const endDate = new Date();
+          const lastWeekEndDate = new Date();
+          lastWeekEndDate.setDate(endDate.getDate() - 7);
+          const [currentResponse, lastResponse] = await Promise.all([
+            axios.get(`/api/reports?type=weekly&endDate=${endDate.toISOString()}`),
+            axios.get(`/api/reports?type=weekly&endDate=${lastWeekEndDate.toISOString()}`)
+          ]);
+          const currentData = currentResponse.data;
+          const lastData = lastResponse.data;
+          const salesByWeek = currentData.salesByWeek || Array(7).fill(0);
+          const currentTotal = salesByWeek.reduce((sum: number, val: number) => sum + val, 0);
+          const lastTotal = (lastData.salesByWeek || []).reduce((sum: number, val: number) => sum + val, 0);
+          const percentageChange = calculatePercentageChange(currentTotal, lastTotal);
+          setApiChartData(prev => ({ ...prev, week: {
+            ...prev.week, rawData: salesByWeek, total: `฿${currentTotal.toLocaleString('th-TH')}`,
+            change: percentageChange.change, changeColor: percentageChange.isPositive ? "text-success" : "text-error",
+          }}));
+        } else if (timeRange === 'year') {
+            const currentYear = new Date().getFullYear();
+            const years = Array.from({length: 5}, (_, i) => currentYear - i).reverse();
+            const responses = await Promise.all(years.map(year => axios.get(`/api/reports?type=yearly&year=${year}`)));
+            const yearlyData = responses.map(response => (response.data.salesByMonth || []).reduce((sum: number, val: number) => sum + val, 0));
+            const currentYearTotal = yearlyData[yearlyData.length - 1] || 0;
+            const lastYearTotal = yearlyData[yearlyData.length - 2] || 0;
+            const percentageChange = calculatePercentageChange(currentYearTotal, lastYearTotal);
+            setApiChartData(prev => ({ ...prev, year: {
+              labels: years.map(year => (year + 543).toString()), rawData: yearlyData,
+              total: `฿${yearlyData.reduce((sum, val) => sum + val, 0).toLocaleString('th-TH')}`,
+              change: percentageChange.change, changeColor: percentageChange.isPositive ? "text-success" : "text-error",
+            }}));
+        }
+      } catch (error) {
+        console.error('Failed to fetch chart data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChartData();
+  }, [timeRange]);
+
+  const currentData = useMemo(() => apiChartData[timeRange], [apiChartData, timeRange]);
 
   const lineData: ChartData<"line"> = {
     labels: currentData.labels,
@@ -110,7 +182,6 @@ export default function TotalSalesChart() {
         bodyColor: theme === 'dark' ? '#d1d5db' : '#4b5563',
         borderColor: theme === 'dark' ? '#374151' : '#e5e7eb',
         borderWidth: 1,
-        // ========== START: ส่วนที่แก้ไข (2. เปลี่ยน USD เป็น THB) ==========
         callbacks: {
             label: function(context) {
                 let label = context.dataset.label || '';
@@ -123,7 +194,6 @@ export default function TotalSalesChart() {
                 return label;
             }
         }
-        // ========== END: ส่วนที่แก้ไข (2. เปลี่ยน USD เป็น THB) ==========
       },
       title: { display: false },
     },
@@ -138,9 +208,7 @@ export default function TotalSalesChart() {
         grid: { color: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' },
         ticks: {
           color: theme === 'dark' ? '#9ca3af' : '#6b7280',
-          // ========== START: ส่วนที่แก้ไข (3. เปลี่ยน $ เป็น ฿) ==========
           callback: (value: number | string) => `฿${Number(value) / 1000}k`,
-          // ========== END: ส่วนที่แก้ไข (3. เปลี่ยน $ เป็น ฿) ==========
         },
       },
     },
@@ -152,32 +220,32 @@ export default function TotalSalesChart() {
         <div className="flex items-center justify-between">
           <h3 className="card-title text-base">ยอดขายรวม</h3>
           <div className="join">
-            <button 
-              className={`btn btn-xs join-item ${timeRange === 'week' ? 'btn-active' : ''}`}
-              onClick={() => setTimeRange('week')}
-            >
-              สัปดาห์
-            </button>
-            <button 
-              className={`btn btn-xs join-item ${timeRange === 'month' ? 'btn-active' : ''}`}
-              onClick={() => setTimeRange('month')}
-            >
-              เดือน
-            </button>
-            <button 
-              className={`btn btn-xs join-item ${timeRange === 'year' ? 'btn-active' : ''}`}
-              onClick={() => setTimeRange('year')}
-            >
-              ปี
-            </button>
+            <button className={`btn btn-xs join-item ${timeRange === 'week' ? 'btn-active' : ''}`} onClick={() => setTimeRange('week')}>สัปดาห์</button>
+            <button className={`btn btn-xs join-item ${timeRange === 'month' ? 'btn-active' : ''}`} onClick={() => setTimeRange('month')}>เดือน</button>
+            <button className={`btn btn-xs join-item ${timeRange === 'year' ? 'btn-active' : ''}`} onClick={() => setTimeRange('year')}>ปี</button>
           </div>
         </div>
         <div className="mt-2 text-sm">
-          <span className="font-semibold">{currentData.total}</span>
-          <span className={`ml-2 ${currentData.changeColor}`}>{currentData.change}</span>
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <span className="skeleton h-5 w-24"></span>
+              <span className="skeleton h-4 w-16"></span>
+            </div>
+          ) : (
+            <>
+              <span className="font-semibold">{currentData.total}</span>
+              <span className={`ml-2 ${currentData.changeColor}`}>{currentData.change}</span>
+            </>
+          )}
         </div>
-        <div className="flex-grow mt-4">
-          <Line ref={chartRef} data={lineData} options={lineOptions} />
+        <div className="flex-grow mt-4 relative">
+          {loading ? (
+            <div className="absolute inset-0 flex justify-center items-center">
+              <span className="loading loading-spinner loading-md"></span>
+            </div>
+          ) : (
+            <Line ref={chartRef} data={lineData} options={lineOptions} />
+          )}
         </div>
       </div>
     </div>

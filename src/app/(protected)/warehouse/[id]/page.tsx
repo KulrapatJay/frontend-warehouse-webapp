@@ -1,88 +1,95 @@
-// เพิ่ม 'use client' ไว้ด้านบนสุดของไฟล์ เป็น best practice สำหรับ component ที่อาจมี interaction
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
-// ========== START: ส่วนที่แก้ไข (1. แก้ไข Type) ==========
 type Product = {
   id: number;
-  productCode: string;
-  skuCode: string;
-  name: string;
-  category: string;
+  product: {
+    product_name: string;
+    sku: string;
+    category: {
+      category_name: string;
+    };
+    unit: {
+      unit_name: string;
+    };
+  };
+  warehouse: {
+    name: string;
+    location: string;
+  };
+  creator: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    prefix: {
+      name: string;
+    };
+  };
   quantity: number;
-  unit: string;
-  status: 'มีสินค้า' | 'สินค้าใกล้หมด' | 'สินค้าหมด';
-  responsible: string;
-  lastUpdated: string;
-  productionDate: string; // << เพิ่ม: วันที่ผลิต
-  expirationDate: string; // << เพิ่ม: วันหมดอายุ
+  production_date: string;
+  expiry_date: string;
+  created_at: string;
+  updated_at: string;
 };
-// ========== END: ส่วนที่แก้ไข (1. แก้ไข Type) ==========
 
+// ประเภทข้อมูลสำหรับ Inventory Movement ที่ได้จาก API
+type InventoryMovement = {
+  quantity_moved: number;
+};
 
 type WarehouseData = {
+  id: number;
   name: string;
-  stats: {
-    totalInbound: number;
-    totalOutbound: number;
-    dailyInbound: number;
-  };
+  location: string;
   products: Product[];
 };
 
-// ========== START: ส่วนที่แก้ไข (2. อัปเดตข้อมูลตัวอย่าง) ==========
-const allWarehouseData: { [key: string]: WarehouseData } = {
-  '1': {
-    name: 'Warehouse 1',
-    stats: { totalInbound: 850, totalOutbound: 620, dailyInbound: 55 },
-    products: [
-      { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', lastUpdated: '2568-09-01', productionDate: '2568-08-30', expirationDate: '2568-09-05' },
-      { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2568-09-02', productionDate: '2568-09-01', expirationDate: '2568-09-08' },
-      { id: 3, productCode: 'BK-DAN', skuCode: 'BK-DAN-01', name: 'เดนิชผลไม้รวม', category: 'Pastry', quantity: 9, unit: 'ชิ้น', status: 'สินค้าใกล้หมด', responsible: 'สมชาย', lastUpdated: '2568-09-03', productionDate: '2568-09-02', expirationDate: '2568-09-06' },
-    ],
-  },
-  '2': {
-    name: 'Warehouse 2',
-    stats: { totalInbound: 210, totalOutbound: 185, dailyInbound: 15 },
-    products: [
-      { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', lastUpdated: '2568-09-01', productionDate: '2568-08-28', expirationDate: '2568-09-12' },
-      { id: 5, productCode: 'PI-APL', skuCode: 'PI-APL-01', name: 'พายแอปเปิ้ล', category: 'Pie', quantity: 5, unit: 'ชิ้น', status: 'สินค้าใกล้หมด', responsible: 'วิชัย', lastUpdated: '2568-08-28', productionDate: '2568-08-25', expirationDate: '2568-09-05' },
-      { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', lastUpdated: '2568-09-04', productionDate: '2568-09-01', expirationDate: '2568-09-15' },
-      { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', lastUpdated: '2568-08-20', productionDate: '2568-08-15', expirationDate: '2568-08-25' },
-    ],
-  },
-  '3': {
-    name: 'Warehouse 3',
-    stats: { totalInbound: 5500, totalOutbound: 4800, dailyInbound: 320 },
-    products: [
-      { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2568-09-05', productionDate: '2568-06-01', expirationDate: '2569-06-01' },
-      { id: 9, productCode: 'RM-YST', skuCode: 'RM-YST-01', name: 'ยีสต์', category: 'Ingredient', quantity: 1500, unit: 'ซอง', status: 'มีสินค้า', responsible: 'ประวิทย์', lastUpdated: '2568-09-05', productionDate: '2568-07-10', expirationDate: '2570-07-10' },
-      { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส', category: 'Dairy', quantity: 45, unit: 'kg', status: 'มีสินค้า', responsible: 'มานี', lastUpdated: '2568-09-03', productionDate: '2568-08-20', expirationDate: '2568-11-20' },
-      { id: 11, productCode: 'RM-BLB', skuCode: 'RM-BLB-01', name: 'บลูเบอร์รีแช่แข็ง', category: 'Fruit', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', lastUpdated: '2568-09-02', productionDate: '2568-03-01', expirationDate: '2569-03-01' },
-    ],
-  },
+// ========== Helper Functions ==========
+const getStatusBadgeClass = (quantity: number, expiryDate: string) => {
+  if (quantity === 0) return "badge-error";
+
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const daysUntilExpiry = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysUntilExpiry <= 0) return "badge-error";
+  if (daysUntilExpiry < 3) return "badge-warning";
+
+  return "badge-success";
 };
-// ========== END: ส่วนที่แก้ไข (2. อัปเดตข้อมูลตัวอย่าง) ==========
 
+const getStatus = (quantity: number, expiryDate: string) => {
+  if (quantity === 0) return "สินค้าหมด";
 
-const getStatusBadgeClass = (status: Product['status']) => {
-  switch (status) {
-    case 'มีสินค้า':
-      return 'badge-success';
-    case 'สินค้าใกล้หมด':
-      return 'badge-warning';
-    case 'สินค้าหมด':
-      return 'badge-error';
-    default:
-      return 'badge-ghost';
-  }
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const daysUntilExpiry = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysUntilExpiry <= 0) return "สินค้าหมดอายุ";
+  if (daysUntilExpiry < 3) return "ใกล้หมดอายุ";
+
+  return "สินค้าปกติ";
 };
 
 const formatDateDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${parseInt(year, 10)}`;
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
+
+const formatCreatorName = (creator: Product["creator"]) => {
+  return `${creator.prefix.name}${creator.first_name} ${creator.last_name}`;
 };
 
 type WarehousePageProps = {
@@ -92,45 +99,167 @@ type WarehousePageProps = {
 };
 
 export default function WarehousePage({ params }: WarehousePageProps) {
-  const { id } = (params);
-  const data = allWarehouseData[id];
+  const { id } = params;
 
-  const [searchTerm, setSearchTerm] = useState('');
+  // ========== States ==========
+  const [warehouseData, setWarehouseData] = useState<WarehouseData | null>(
+    null
+  );
+  // State ใหม่สำหรับเก็บข้อมูลสินค้าออกโดยเฉพาะ
+  const [outgoingMovements, setOutgoingMovements] = useState<InventoryMovement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
-  const today = new Date();
-  const formattedDate = new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(today);
-
+  // ========== Fetch Data from API ==========
   useEffect(() => {
-    if (data?.products) {
-      const results = data.products.filter(product => {
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+
+        // เรียก API สองส่วนพร้อมกัน
+        const [productsResponse, movementsResponse] = await Promise.all([
+          axios.get(`/api/products-warehouse?warehouse_id=${id}`),
+          // เรียก API sales-orders พร้อมส่ง warehouse_id ไปด้วย
+          axios.get(`/api/sales-orders?warehouse_id=${id}`) 
+        ]);
+        
+        const products = productsResponse.data || [];
+        const movements = movementsResponse.data || [];
+        setOutgoingMovements(movements);
+
+        if (products.length > 0) {
+          const warehouseInfo = products[0].warehouse;
+          setWarehouseData({
+            id: parseInt(id),
+            name: warehouseInfo.name,
+            location: warehouseInfo.location || "",
+            products: products,
+          });
+        } else {
+          try {
+            const warehouseResponse = await axios.get(`/api/products/warehouses/${id}`);
+            const warehouse = warehouseResponse.data;
+            setWarehouseData({
+              id: warehouse.id,
+              name: warehouse.name,
+              location: warehouse.location || "",
+              products: [],
+            });
+          } catch (warehouseError) {
+             setWarehouseData({
+              id: parseInt(id),
+              name: `คลังสินค้า ${id}`,
+              location: "",
+              products: [],
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast.error("ไม่สามารถดึงข้อมูลได้");
+        setWarehouseData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchAllData();
+    }
+  }, [id]);
+
+  // ========== Filter Products ==========
+  useEffect(() => {
+    if (warehouseData?.products) {
+      const results = warehouseData.products.filter((product) => {
         const term = searchTerm.toLowerCase();
-        // ========== START: ส่วนที่แก้ไข (3. เพิ่มเงื่อนไขการค้นหา) ==========
         return (
-          product.name.toLowerCase().includes(term) ||
-          product.category.toLowerCase().includes(term) ||
-          product.responsible.toLowerCase().includes(term) ||
-          product.productCode.toLowerCase().includes(term) ||
-          product.skuCode.toLowerCase().includes(term) ||
-          formatDateDisplay(product.productionDate).includes(term) || // ค้นหาจากวันที่ผลิต
-          formatDateDisplay(product.expirationDate).includes(term)    // ค้นหาจากวันหมดอายุ
+          product.product.product_name.toLowerCase().includes(term) ||
+          product.product.sku.toLowerCase().includes(term) ||
+          product.product.category.category_name.toLowerCase().includes(term) ||
+          product.product.unit.unit_name.toLowerCase().includes(term) ||
+          formatCreatorName(product.creator).toLowerCase().includes(term) ||
+          formatDateDisplay(product.production_date).includes(term) ||
+          formatDateDisplay(product.expiry_date).includes(term)
         );
-        // ========== END: ส่วนที่แก้ไข (3. เพิ่มเงื่อนไขการค้นหา) ==========
       });
       setFilteredProducts(results);
     }
-  }, [searchTerm, data?.products]);
+  }, [searchTerm, warehouseData?.products]);
 
+  // ========== Calculate Stats ==========
+  const calculateStats = () => {
+    if (!warehouseData?.products)
+      return {
+        totalProducts: 0,
+        totalQuantity: 0,
+        incomingToday: 0,
+        outgoingTotal: 0,
+      };
 
-  if (!data) {
+    const products = warehouseData.products;
+    const today = new Date();
+    const todayString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
+
+    // รวมจำนวนสินค้าทั้งหมดในคลัง
+    const totalQuantity = products.reduce(
+      (sum, product) => sum + product.quantity,
+      0
+    );
+
+    // จำนวนรายการสินค้า
+    const totalProducts = products.length;
+
+    // สินค้าเข้าคลังวันนี้ (นับจำนวนสินค้าที่ created_at เป็นวันนี้)
+    const incomingToday = products
+      .filter((p) => {
+        const createdDate = new Date(p.created_at).toISOString().split("T")[0];
+        return createdDate === todayString;
+      })
+      .reduce((sum, product) => sum + product.quantity, 0);
+
+    // แก้ไขส่วน TODO เดิม: คำนวณสินค้าออกจาก state ที่ดึงมาใหม่
+    const outgoingTotal = outgoingMovements.reduce(
+      (sum, item) => sum + item.quantity_moved,
+      0
+    );
+
+    return { totalProducts, totalQuantity, incomingToday, outgoingTotal };
+  };
+
+  const stats = calculateStats();
+  const today = new Date();
+  const formattedDate = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(today);
+
+  // ========== Loading State ==========
+  if (loading) {
+    return (
+      <main className="flex flex-col items-center justify-center min-h-screen p-8">
+        <span className="loading loading-spinner loading-lg"></span>
+        <p className="mt-4">กำลังโหลดข้อมูลคลังสินค้า...</p>
+      </main>
+    );
+  }
+
+  // ========== Error State ==========
+  if (!warehouseData) {
     return (
       <main className="flex flex-col items-center justify-center min-h-screen p-8 text-center">
         <h1 className="text-4xl font-bold mb-4">ไม่พบข้อมูลคลังสินค้า</h1>
-        <p className="text-lg mb-8">ขออภัย, เราไม่พบข้อมูลสำหรับคลังสินค้า ID: {id}</p>
+        <p className="text-lg mb-8">
+          ขออภัย, เราไม่พบข้อมูลสำหรับคลังสินค้า ID: {id}
+        </p>
+        <button
+          className="btn btn-primary"
+          onClick={() => window.history.back()}
+        >
+          กลับไปหน้าก่อนหน้า
+        </button>
       </main>
     );
   }
@@ -138,12 +267,24 @@ export default function WarehousePage({ params }: WarehousePageProps) {
   return (
     <main>
       <div>
-        {/* --- (ส่วนของ Stats ไม่มีการเปลี่ยนแปลง) --- */}
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">{warehouseData.name}</h1>
+          {warehouseData.location && (
+            <p className="text-base-content/70">
+              ที่ตั้ง: {warehouseData.location}
+            </p>
+          )}
+        </div>
+
+        {/* Stats - แสดงข้อมูลการเข้า-ออกสินค้า */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="stats bg-base-100 shadow">
             <div className="stat">
               <div className="stat-title">สินค้าเข้าวันนี้</div>
-              <div className="stat-value text-info">{data.stats.dailyInbound.toLocaleString()}</div>
+              <div className="stat-value text-success">
+                {stats.incomingToday.toLocaleString()}
+              </div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
                 <span>{formattedDate}</span>
@@ -152,8 +293,8 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           </div>
           <div className="stats bg-base-100 shadow">
             <div className="stat">
-              <div className="stat-title">สินค้าเข้ารวม </div>
-              <div className="stat-value text-success">{data.stats.totalInbound.toLocaleString()}</div>
+              <div className="stat-title">สินค้าทั้งหมด</div>
+              <div className="stat-value text-info">{stats.totalQuantity.toLocaleString()}</div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
                 <span>{formattedDate}</span>
@@ -162,8 +303,8 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           </div>
           <div className="stats bg-base-100 shadow">
             <div className="stat">
-              <div className="stat-title">สินค้าออกรวม </div>
-              <div className="stat-value text-error">{data.stats.totalOutbound.toLocaleString()}</div>
+              <div className="stat-title">สินค้าออกรวม</div>
+              <div className="stat-value text-error">{stats.outgoingTotal.toLocaleString()}</div>
               <div className="stat-desc flex justify-between">
                 <span>ชิ้น</span>
                 <span>{formattedDate}</span>
@@ -172,11 +313,13 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           </div>
         </div>
 
+        {/* Products Table */}
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
               <h2 className="card-title">
-                รายการสินค้าทั้งหมด ({filteredProducts.length})
+                รายการสินค้าทั้งหมด ({stats.totalProducts}) - จำนวนรวม{" "}
+                {stats.totalQuantity.toLocaleString()} ชิ้น
               </h2>
               <input
                 type="text"
@@ -189,15 +332,13 @@ export default function WarehousePage({ params }: WarehousePageProps) {
 
             <div className="overflow-x-auto">
               <table className="table w-full">
-                {/* ========== START: ส่วนที่แก้ไข (4. เพิ่มคอลัมน์ในตาราง) ========== */}
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
                   <tr>
-                    <th className="p-4">รหัสสินค้า</th>
-                    <th className="p-4">รหัส SKU</th>
+                    <th className="p-4">รหัสสินค้า (SKU)</th>
                     <th className="p-4">ชื่อสินค้า</th>
-                    <th className="p-4">ประเภท</th>
+                    <th className="p-4">หมวดหมู่</th>
                     <th className="p-4 text-right">จำนวน</th>
-                    <th className="p-4">หน่วยนับ</th>
+                    <th className="p-4">หน่วย</th>
                     <th className="p-4 text-center">สถานะ</th>
                     <th className="p-4">ผู้รับผิดชอบ</th>
                     <th className="p-4">วันที่ผลิต</th>
@@ -206,27 +347,66 @@ export default function WarehousePage({ params }: WarehousePageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
-                    <tr key={product.id} className="hover border-b">
-                      <td className="p-4 font-mono">{product.productCode}</td>
-                      <td className="p-4 font-mono">{product.skuCode}</td>
-                      <td className="p-4">{product.name}</td>
-                      <td className="p-4">{product.category}</td>
-                      <td className="p-4 text-right">{product.quantity.toLocaleString()}</td>
-                      <td className="p-4">{product.unit}</td>
-                      <td className="p-4 text-center">
-                        <span className={`badge w-28 justify-center ${getStatusBadgeClass(product.status)}`}>
-                          {product.status}
-                        </span>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product) => (
+                      <tr key={product.id} className="hover border-b">
+                        <td className="p-4 font-mono">{product.product.sku}</td>
+                        <td className="p-4">{product.product.product_name}</td>
+                        <td className="p-4">
+                          {product.product.category.category_name}
+                        </td>
+                        <td className="p-4 text-right">
+                          {product.quantity.toLocaleString()}
+                        </td>
+                        <td className="p-4">
+                          {product.product.unit.unit_name}
+                        </td>
+                        <td className="p-4 text-center">
+                          <span
+                            className={`badge w-32 justify-center ${getStatusBadgeClass(
+                              product.quantity,
+                              product.expiry_date
+                            )}`}
+                          >
+                            {getStatus(product.quantity, product.expiry_date)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {formatCreatorName(product.creator)}
+                        </td>
+                        <td className="p-4">
+                          {formatDateDisplay(product.production_date)}
+                        </td>
+                        <td className="p-4 text-error font-medium">
+                          {formatDateDisplay(product.expiry_date)}
+                        </td>
+                        <td className="p-4">
+                          {formatDateDisplay(product.updated_at)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} className="text-center p-8">
+                        <div className="flex flex-col items-center gap-4">
+                          <span className="text-base-content/50">
+                            {searchTerm
+                              ? "ไม่พบผลการค้นหา"
+                              : "ไม่มีสินค้าในคลังนี้"}
+                          </span>
+                          {searchTerm && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              onClick={() => setSearchTerm("")}
+                            >
+                              ล้างการค้นหา
+                            </button>
+                          )}
+                        </div>
                       </td>
-                      <td className="p-4">{product.responsible}</td>
-                      <td className="p-4">{formatDateDisplay(product.productionDate)}</td>
-                      <td className="p-4 text-error font-medium">{formatDateDisplay(product.expirationDate)}</td>
-                      <td className="p-4">{formatDateDisplay(product.lastUpdated)}</td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
-                {/* ========== END: ส่วนที่แก้ไข (4. เพิ่มคอลัมน์ในตาราง) ========== */}
               </table>
             </div>
           </div>

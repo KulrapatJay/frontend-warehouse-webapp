@@ -1,78 +1,92 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { FaPlus } from 'react-icons/fa';
-import Link from 'next/link';
+import React, { useState, useMemo, useEffect } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { FaPlus } from "react-icons/fa";
+import Link from "next/link";
+import axios from "axios";
+import toast from "react-hot-toast";
 
-// ========== START: ส่วนที่แก้ไข 1. Type Definitions ==========
+// ========== Updated Type Definitions ==========
 type Product = {
   id: number;
-  productCode: string;
-  skuCode: string;
-  name: string;
-  category: string;
+  product: {
+    product_name: string;
+    sku: string;
+    category: {
+      category_name: string;
+    };
+    unit: {
+      unit_name: string;
+    };
+  };
+  warehouse: {
+    name: string;
+    location: string;
+  };
+  creator: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    prefix: {
+      name: string;
+    };
+  };
   quantity: number;
-  unit: string;
-  status: 'มีสินค้า' | 'สินค้าใกล้หมด' | 'สินค้าหมด';
-  responsible: string;
-  productionDate: string; // เพิ่ม: วันที่ผลิต
-  expirationDate: string; // เพิ่ม: วันหมดอายุ
-  lastUpdated: string;
-  warehouse: string;
-};
-type BaseProduct = Omit<Product, 'warehouse'>;
-// ========== END: ส่วนที่แก้ไข 1. Type Definitions ==========
-
-type WarehouseData = {
-  name: string;
-  dailyInbound: number;
-  totalOutbound: number;
-  products: BaseProduct[];
+  production_date: string;
+  expiry_date: string;
+  created_at: string;
+  updated_at: string;
 };
 
-// ========== START: ส่วนที่แก้ไข 2. Data ==========
-const allWarehouseData: Record<string, WarehouseData> = {
-  '1': { name: 'Warehouse 1', dailyInbound: 55, totalOutbound: 4200, products: [
-    { id: 1, productCode: 'BK-CRO', skuCode: 'BK-CRO-01', name: 'ครัวซองต์เนยสด', category: 'Pastry', quantity: 150, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมชาย', productionDate: '2568-08-30', expirationDate: '2568-09-05', lastUpdated: '2568-09-01' },
-    { id: 2, productCode: 'BK-WWB', skuCode: 'BK-WWB-01', name: 'ขนมปังโฮลวีท', category: 'Bread', quantity: 75, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', productionDate: '2568-09-01', expirationDate: '2568-09-08', lastUpdated: '2568-09-02' },
-  ]},
-  '2': { name: 'Warehouse 2', dailyInbound: 15, totalOutbound: 600, products: [
-    { id: 4, productCode: 'CK-CHF', skuCode: 'CK-CHF-01', name: 'เค้กช็อกโกแลตฟัดจ์', category: 'Cake', quantity: 12, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'วิชัย', productionDate: '2568-08-28', expirationDate: '2568-09-12', lastUpdated: '2568-09-01' },
-    { id: 6, productCode: 'CK-BCC', skuCode: 'CK-BCC-01', name: 'บลูเบอร์รีชีสเค้ก', category: 'Cake', quantity: 20, unit: 'ชิ้น', status: 'มีสินค้า', responsible: 'สมศรี', productionDate: '2568-09-01', expirationDate: '2568-09-15', lastUpdated: '2568-09-04' },
-    { id: 7, productCode: 'CK-CAR', skuCode: 'CK-CAR-01', name: 'เค้กแครอท', category: 'Cake', quantity: 0, unit: 'ชิ้น', status: 'สินค้าหมด', responsible: 'สมศรี', productionDate: '2568-08-15', expirationDate: '2568-08-25', lastUpdated: '2568-08-20' },
-  ]},
-  '3': { name: 'Warehouse 3', dailyInbound: 20, totalOutbound: 0, products: [
-    { id: 8, productCode: 'RM-BFL', skuCode: 'RM-BFL-01', name: 'แป้งขนมปัง (ถุง 1kg)', category: 'Flour', quantity: 350, unit: 'ถุง', status: 'มีสินค้า', responsible: 'ประวิทย์', productionDate: '2568-06-01', expirationDate: '2569-06-01', lastUpdated: '2568-09-05' },
-    { id: 10, productCode: 'RM-CCH', skuCode: 'RM-CCH-01', name: 'ครีมชีส (kg)', category: 'Dairy', quantity: 15, unit: 'kg', status: 'สินค้าใกล้หมด', responsible: 'มานี', productionDate: '2568-08-20', expirationDate: '2568-11-20', lastUpdated: '2568-09-03' },
-  ]},
+// ++ MODIFIED: ประเภทข้อมูลสำหรับสินค้าออก ++
+type InventoryMovement = {
+    quantity_moved: number;
+    source_warehouse?: { // relation จาก backend
+        name: string;
+    };
 };
-// ========== END: ส่วนที่แก้ไข 2. Data ==========
 
-const allProducts: Product[] = Object.values(allWarehouseData).flatMap((data) =>
-  data.products.map((product) => ({
-    ...product,
-    warehouse: data.name,
-  }))
-);
+
+type ApiResponse = {
+  success: boolean;
+  data: Product[];
+  message?: string;
+};
 
 // --- Helper Functions ---
-const getStatusBadgeClass = (status: Product['status']) => {
-  switch (status) {
-    case 'มีสินค้า': return 'badge-success';
-    case 'สินค้าใกล้หมด': return 'badge-warning';
-    case 'สินค้าหมด': return 'badge-error';
-    default: return 'badge-ghost';
-  }
+const getStatusBadgeClass = (quantity: number, expiryDate: string) => {
+  if (quantity === 0) return "badge-error";
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const daysUntilExpiry = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (daysUntilExpiry <= 0) return "badge-error";
+  if (daysUntilExpiry < 3) return "badge-warning";
+  return "badge-success";
 };
-
+const getStatus = (quantity: number, expiryDate: string) => {
+  if (quantity === 0) return "สินค้าหมด";
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const daysUntilExpiry = Math.ceil(
+    (expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (daysUntilExpiry <= 0) return "สินค้าหมดอายุ";
+  if (daysUntilExpiry < 3) return "ใกล้หมดอายุ";
+  return "สินค้าปกติ";
+};
 const formatDateDisplay = (dateString: string) => {
-    if (!dateString) return '';
-    const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("th-TH");
+};
+const formatCreatorName = (creator: Product["creator"]) => {
+  return `${creator.prefix.name}${creator.first_name} ${creator.last_name}`;
 };
 
-// ========== START: ส่วนที่แก้ไข 3. filterProducts Function ==========
+// ========== Filter Function ==========
 export function filterProducts(
   list: Product[],
   searchTerm: string,
@@ -82,23 +96,30 @@ export function filterProducts(
   const term = searchTerm.trim().toLowerCase();
   return list.filter((product) => {
     const matchSearch =
-      product.name.toLowerCase().includes(term) ||
-      product.productCode.toLowerCase().includes(term) ||
-      product.skuCode.toLowerCase().includes(term) ||
-      formatDateDisplay(product.productionDate).includes(term) ||
-      formatDateDisplay(product.expirationDate).includes(term);
-    const matchCategory = category === "all" || product.category === category;
-    const matchWarehouse = warehouse === "all" || product.warehouse === warehouse;
+      product.product.product_name.toLowerCase().includes(term) ||
+      product.product.sku.toLowerCase().includes(term) ||
+      formatDateDisplay(product.production_date).includes(term) ||
+      formatDateDisplay(product.expiry_date).includes(term);
+    const matchCategory =
+      category === "all" || product.product.category.category_name === category;
+    const matchWarehouse =
+      warehouse === "all" || product.warehouse.name === warehouse;
     return matchSearch && matchCategory && matchWarehouse;
   });
 }
-// ========== END: ส่วนที่แก้ไข 3. filterProducts Function ==========
-
 
 export default function StaffAllProductsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedWarehouse, setSelectedWarehouse] = useState('all');
+  const [products, setProducts] = useState<Product[]>([]);
+  // ++ ADDED: State สำหรับเก็บข้อมูลสินค้าออก ++
+  const [outboundMovements, setOutboundMovements] = useState<InventoryMovement[]>([]);
+  const [categories, setCategories] = useState<string[]>(["all"]);
+  const [warehouses, setWarehouses] = useState<string[]>(["all"]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedWarehouse, setSelectedWarehouse] = useState("all");
   const { theme } = useTheme();
 
   // --- Pagination State ---
@@ -106,25 +127,89 @@ export default function StaffAllProductsPage() {
   const pageSizeOptions = [5, 10, 15, 20];
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
 
-  // --- Calculations ---
-  const dailyInbound = Object.values(allWarehouseData).reduce((sum, wh) => sum + wh.dailyInbound, 0);
-  const totalProducts = Object.values(allWarehouseData).reduce((sum, wh) => sum + wh.products.length, 0);
-  const totalOutbound = Object.values(allWarehouseData).reduce((sum, wh) => sum + wh.totalOutbound, 0);
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>(['all']);
-    allProducts.forEach((p) => set.add(p.category));
-    return Array.from(set);
-  }, []);
-  const warehouseOptions = ['all', 'Warehouse 1', 'Warehouse 2', 'Warehouse 3'];
+      // Fetch all data in parallel
+      const [productsResponse, categoriesResponse, warehousesResponse, salesOrdersResponse] = await Promise.all([
+        axios.get('/api/products-warehouse'),
+        axios.get('/api/products/categories'),
+        axios.get('/api/products/warehouses'),
+        // ++ MODIFIED: เพิ่ม parameter 'type=movements' เพื่อขอข้อมูลที่ถูกต้อง ++
+        axios.get('/api/sales-orders?type=movements'),
+      ]);
+
+      // Set products data
+      const rawProducts = (productsResponse.data ?? []) as Product[];
+      setProducts(rawProducts);
+
+      // Set outbound movements data
+      const rawMovements = (salesOrdersResponse.data ?? []) as InventoryMovement[];
+      setOutboundMovements(rawMovements);
+
+      // Set categories from dedicated API
+      const categoriesData = categoriesResponse.data || [];
+      const categoryNames = categoriesData.map((cat: { category_name?: string; name?: string }) => cat.category_name || cat.name);
+      setCategories(['all', ...categoryNames]);
+
+      // Set warehouses from dedicated API
+      const warehousesData = warehousesResponse.data || [];
+      const warehouseNames = warehousesData.map((warehouse: { name: string }) => warehouse.name);
+      setWarehouses(['all', ...warehouseNames]);
+
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      setError(
+        err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการดึงข้อมูล'
+      );
+      toast.error('ไม่สามารถดึงข้อมูลสินค้าได้');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
+
+  // --- Calculations ---
+  const totalProducts = products.reduce((sum, p) => sum + p.quantity, 0);
+  const dailyInbound = products
+    .filter((p) => {
+      const today = new Date();
+      const createdAt = new Date(p.created_at);
+      return createdAt.toDateString() === today.toDateString();
+    })
+    .reduce((sum, p) => sum + p.quantity, 0);
+
+  // ++ MODIFIED: คำนวณสินค้าออกโดยอิงตาม filter คลังสินค้าที่เลือก ++
+  const totalOutbound = useMemo(() => {
+    // กรองข้อมูล movements ตามคลังสินค้าที่ถูกเลือกใน dropdown
+    const movementsToCalculate =
+      selectedWarehouse === 'all'
+        ? outboundMovements
+        : outboundMovements.filter(
+            (item) => item.source_warehouse?.name === selectedWarehouse
+          );
+
+    // รวมยอดจาก quantity_moved
+    return movementsToCalculate.reduce(
+      (sum, p) => sum + p.quantity_moved,
+      0
+    );
+  }, [outboundMovements, selectedWarehouse]); // คำนวณใหม่เมื่อข้อมูล movements หรือ filter เปลี่ยน
+
   const filteredProducts = useMemo(
-    () => filterProducts(allProducts, searchTerm, selectedCategory, selectedWarehouse),
-    [searchTerm, selectedCategory, selectedWarehouse]
+    () =>
+      filterProducts(products, searchTerm, selectedCategory, selectedWarehouse),
+    [products, searchTerm, selectedCategory, selectedWarehouse]
   );
 
   // --- Pagination Logic ---
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
-  
+
   useEffect(() => {
     setPage(1);
   }, [searchTerm, selectedCategory, selectedWarehouse, pageSize]);
@@ -134,7 +219,7 @@ export default function StaffAllProductsPage() {
       setPage(totalPages);
     }
   }, [page, totalPages]);
-  
+
   const startIdx = (page - 1) * pageSize;
   const endIdx = startIdx + pageSize;
   const paginatedProducts = filteredProducts.slice(startIdx, endIdx);
@@ -142,22 +227,75 @@ export default function StaffAllProductsPage() {
   const goto = (p: number) => {
     setPage(Math.min(Math.max(1, p), totalPages));
   };
-  
+
   const today = new Date();
-  const formattedDate = new Intl.DateTimeFormat('th-TH', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
+  const formattedDate = new Intl.DateTimeFormat("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   }).format(today);
+
+  if (loading) {
+    return (
+      <main>
+        <div className="flex justify-center items-center h-64">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main>
+        <div className="alert alert-error">
+          <span>เกิดข้อผิดพลาด: {error}</span>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main>
       <div>
         {/* KPI Cards Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าเข้า</div><div className="stat-value text-info">{dailyInbound.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
-            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าทั้งหมด</div><div className="stat-value text-success">{totalProducts.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
-            <div className="stats bg-base-100 shadow"><div className="stat"><div className="stat-title">สินค้าออก</div><div className="stat-value text-error">{totalOutbound.toLocaleString()}</div><div className="stat-desc flex justify-between"><span>ชิ้น</span><span>{formattedDate}</span></div></div></div>
+          <div className="stats bg-base-100 shadow">
+            <div className="stat">
+              <div className="stat-title">สินค้าเข้า</div>
+              <div className="stat-value text-info">
+                {dailyInbound.toLocaleString()}
+              </div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
+            </div>
+          </div>
+          <div className="stats bg-base-100 shadow">
+            <div className="stat">
+              <div className="stat-title">สินค้าทั้งหมด</div>
+              <div className="stat-value text-success">
+                {totalProducts.toLocaleString()}
+              </div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
+            </div>
+          </div>
+          <div className="stats bg-base-100 shadow">
+            <div className="stat">
+              <div className="stat-title">สินค้าออก</div>
+              <div className="stat-value text-error">
+                {totalOutbound.toLocaleString()}
+              </div>
+              <div className="stat-desc flex justify-between">
+                <span>ชิ้น</span>
+                <span>{formattedDate}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="card bg-base-100 shadow-xl">
@@ -171,29 +309,56 @@ export default function StaffAllProductsPage() {
                 </span>
               </span>
               <div className="flex items-center gap-2">
-                <input type="text" placeholder="ค้นหา..." className="input input-bordered w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                <select className="select select-bordered" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                  {categories.map((c) => (<option key={c} value={c}>{c === "all" ? "หมวดหมู่ทั้งหมด" : c}</option>))}
+                <input
+                  type="text"
+                  placeholder="ค้นหา..."
+                  className="input input-bordered w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <select
+                  className="select select-bordered"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "all" ? "หมวดหมู่ทั้งหมด" : c}
+                    </option>
+                  ))}
                 </select>
-                <select className="select select-bordered" value={selectedWarehouse} onChange={(e) => setSelectedWarehouse(e.target.value)}>
-                   {warehouseOptions.map((w) => (<option key={w} value={w}>{w === "all" ? "คลังทั้งหมด" : w}</option>))}
+                <select
+                  className="select select-bordered"
+                  value={selectedWarehouse}
+                  onChange={(e) => setSelectedWarehouse(e.target.value)}
+                >
+                  {warehouses.map((w) => (
+                    <option key={w} value={w}>
+                      {w === "all" ? "คลังทั้งหมด" : w}
+                    </option>
+                  ))}
                 </select>
-                
-                <Link href="/staff/warehouse_management" className={`btn rounded-md text-white transition whitespace-nowrap ${ theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-black hover:bg-gray-800' }`}>
-                    <FaPlus className="h-4 w-4" />
-                    เพิ่มรายการ
-                </Link>
 
+                <Link
+                  href="/staff/warehouse_management"
+                  className={`btn rounded-md text-white transition whitespace-nowrap ${
+                    theme === "dark"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-black hover:bg-gray-800"
+                  }`}
+                >
+                  <FaPlus className="h-4 w-4" />
+                  เพิ่มรายการ
+                </Link>
               </div>
             </div>
 
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="table w-full">
-                {/* ========== START: ส่วนที่แก้ไข 4. Table Header ========== */}
                 <thead className="bg-base-200 text-sm font-semibold uppercase">
                   <tr>
-                    <th className="p-4">รหัสสินค้า</th>
+                    <th className="p-4">รหัสสินค้า (SKU)</th>
                     <th className="p-4">ชื่อสินค้า</th>
                     <th className="p-4">หมวดหมู่</th>
                     <th className="p-4 text-right">จำนวน</th>
@@ -202,32 +367,48 @@ export default function StaffAllProductsPage() {
                     <th className="p-4 text-center">สถานะ</th>
                     <th className="p-4">วันที่ผลิต</th>
                     <th className="p-4">วันหมดอายุ</th>
+                    <th className="p-4">ผู้รับผิดชอบ</th>
                     <th className="p-4">อัปเดตล่าสุด</th>
                   </tr>
                 </thead>
-                {/* ========== END: ส่วนที่แก้ไข 4. Table Header ========== */}
                 <tbody>
                   {paginatedProducts.map((p) => (
                     <tr key={p.id} className="hover border-b">
-                      <td className="p-4 font-mono">{p.productCode}</td>
-                      <td className="p-4">{p.name}</td>
-                      <td className="p-4">{p.category}</td>
-                      <td className="p-4 text-right">{p.quantity.toLocaleString()}</td>
-                      <td className="p-4">{p.unit}</td>
-                      <td className="p-4">{p.warehouse}</td>
-                      <td className="p-4 text-center"><span className={`badge w-28 justify-center ${getStatusBadgeClass(p.status)}`}>{p.status}</span></td>
-                      {/* ========== START: ส่วนที่แก้ไข 5. Table Body ========== */}
-                      <td className="p-4">{formatDateDisplay(p.productionDate)}</td>
-                      <td className="p-4 text-error font-medium">{formatDateDisplay(p.expirationDate)}</td>
-                      <td className="p-4">{formatDateDisplay(p.lastUpdated)}</td>
-                      {/* ========== END: ส่วนที่แก้ไข 5. Table Body ========== */}
+                      <td className="p-4 font-mono">{p.product.sku}</td>
+                      <td className="p-4">{p.product.product_name}</td>
+                      <td className="p-4">
+                        {p.product.category.category_name}
+                      </td>
+                      <td className="p-4 text-right">
+                        {p.quantity.toLocaleString()}
+                      </td>
+                      <td className="p-4">{p.product.unit.unit_name}</td>
+                      <td className="p-4">{p.warehouse.name}</td>
+                      <td className="p-4 text-center">
+                        <span
+                          className={`badge w-28 justify-center ${getStatusBadgeClass(
+                            p.quantity,
+                            p.expiry_date
+                          )}`}
+                        >
+                          {getStatus(p.quantity, p.expiry_date)}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {formatDateDisplay(p.production_date)}
+                      </td>
+                      <td className="p-4 text-error font-medium">
+                        {formatDateDisplay(p.expiry_date)}
+                      </td>
+                      <td className="p-4">{formatCreatorName(p.creator)}</td>
+                      <td className="p-4">{formatDateDisplay(p.updated_at)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
               {filteredProducts.length === 0 && (
                 <p className="text-center p-8 text-base-content text-opacity-60">
-                    ไม่พบข้อมูลสินค้าที่ตรงกับเงื่อนไข
+                  ไม่พบข้อมูลสินค้าที่ตรงกับเงื่อนไข
                 </p>
               )}
             </div>
@@ -236,28 +417,65 @@ export default function StaffAllProductsPage() {
             {filteredProducts.length > 0 && (
               <div className="mt-4 flex items-center justify-between text-sm">
                 <div className="opacity-70">
-                    กำลังเเสดง <span className="font-semibold">{startIdx + 1}</span>–<span className="font-semibold">{Math.min(endIdx, filteredProducts.length)}</span> จาก <span className="font-semibold">{filteredProducts.length}</span>
+                  กำลังแสดง{" "}
+                  <span className="font-semibold">{startIdx + 1}</span>–
+                  <span className="font-semibold">
+                    {Math.min(endIdx, filteredProducts.length)}
+                  </span>{" "}
+                  จาก{" "}
+                  <span className="font-semibold">
+                    {filteredProducts.length}
+                  </span>
                 </div>
-                
+
                 <div className="flex items-center gap-1">
-                    <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => goto(page - 1)}>&lt;</button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                        <button key={p} className={`btn btn-sm ${page === p ? 'btn-neutral' : 'btn-ghost'}`} onClick={() => goto(p)}>{p}</button>
-                    ))}
-                    <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => goto(page + 1)}>&gt;</button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={page <= 1}
+                    onClick={() => goto(page - 1)}
+                  >
+                    &lt;
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        className={`btn btn-sm ${
+                          page === p ? "btn-neutral" : "btn-ghost"
+                        }`}
+                        onClick={() => goto(p)}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={page >= totalPages}
+                    onClick={() => goto(page + 1)}
+                  >
+                    &gt;
+                  </button>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
-                    <span className="whitespace-nowrap opacity-70">จำนวนแถวต่อหน้า</span>
-                    <select className="select select-bordered select-sm" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
-                        {pageSizeOptions.map(size => (
-                            <option key={size} value={size}>{size}</option>
-                        ))}
-                    </select>
+                  <span className="whitespace-nowrap opacity-70">
+                    จำนวนแถวต่อหน้า
+                  </span>
+                  <select
+                    className="select select-bordered select-sm"
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                  >
+                    {pageSizeOptions.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
-
           </div>
         </div>
       </div>
