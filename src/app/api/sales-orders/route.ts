@@ -11,13 +11,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // --- จุดที่แก้ไข ---
-    // 1. ดึง query string ทั้งหมด (เช่น "?warehouse_id=1") จาก URL ที่เข้ามา
     const { search } = new URL(request.url);
 
-    // 2. สร้าง URL ไปยัง Backend โดยเอา query string ทั้งหมดต่อไปด้วย
     const backendApiUrl = `${process.env.BACKEND_API_URL}/api/sales-orders${search}`;
-    // --- สิ้นสุดการแก้ไข ---
 
     const apiResponse = await fetch(backendApiUrl, {
       method: "GET",
@@ -50,7 +46,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    
     const requestData = await request.json();
+    console.log("Frontend API received data:", requestData);
+    
     const backendApiUrl = `${process.env.BACKEND_API_URL}/api/sales-orders`;
 
     const apiResponse = await fetch(backendApiUrl, {
@@ -61,7 +60,10 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(requestData),
     });
+    
     const data = await apiResponse.json();
+    console.log("Backend response data:", data);
+    console.log("Backend response status:", apiResponse.status);
 
     if (!apiResponse.ok) {
       return NextResponse.json(
@@ -70,7 +72,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data);
+    // แก้ไขตรงนี้ - ให้ return ข้อมูลพร้อม status code ที่ถูกต้อง
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error("API Route Error (POST):", error);
     return NextResponse.json(
