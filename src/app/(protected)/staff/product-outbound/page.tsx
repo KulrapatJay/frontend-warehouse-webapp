@@ -252,7 +252,6 @@ export default function ProductOutboundPage() {
           
           // ดึงข้อมูลใบเสร็จจาก API
           const receiptResponse = await axios.get(`/api/print/sales-order/${orderId}`);
-          console.log("Receipt data:", receiptResponse.data);
           
           if (receiptResponse.data && receiptResponse.data.success && receiptResponse.data.data) {
             const receiptData: ReceiptData = receiptResponse.data.data;
