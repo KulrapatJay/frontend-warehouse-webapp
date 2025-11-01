@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { use } from "react";
 
 type Product = {
   id: number;
@@ -35,7 +36,6 @@ type Product = {
   updated_at: string;
 };
 
-// ประเภทข้อมูลสำหรับ Inventory Movement ที่ได้จาก API
 type InventoryMovement = {
   quantity_moved: number;
 };
@@ -93,19 +93,19 @@ const formatCreatorName = (creator: Product["creator"]) => {
 };
 
 type WarehousePageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export default function WarehousePage({ params }: WarehousePageProps) {
-  const { id } = params;
+  // ใช้ React.use() เพื่อ unwrap Promise
+  const { id } = use(params);
 
   // ========== States ==========
   const [warehouseData, setWarehouseData] = useState<WarehouseData | null>(
     null
   );
-  // State ใหม่สำหรับเก็บข้อมูลสินค้าออกโดยเฉพาะ
   const [outgoingMovements, setOutgoingMovements] = useState<InventoryMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -117,10 +117,8 @@ export default function WarehousePage({ params }: WarehousePageProps) {
       try {
         setLoading(true);
 
-        // เรียก API สองส่วนพร้อมกัน
         const [productsResponse, movementsResponse] = await Promise.all([
           axios.get(`/api/products-warehouse?warehouse_id=${id}`),
-          // เรียก API sales-orders พร้อมส่ง warehouse_id ไปด้วย
           axios.get(`/api/sales-orders?warehouse_id=${id}`) 
         ]);
         
@@ -200,18 +198,15 @@ export default function WarehousePage({ params }: WarehousePageProps) {
 
     const products = warehouseData.products;
     const today = new Date();
-    const todayString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
+    const todayString = today.toISOString().split("T")[0];
 
-    // รวมจำนวนสินค้าทั้งหมดในคลัง
     const totalQuantity = products.reduce(
       (sum, product) => sum + product.quantity,
       0
     );
 
-    // จำนวนรายการสินค้า
     const totalProducts = products.length;
 
-    // สินค้าเข้าคลังวันนี้ (นับจำนวนสินค้าที่ created_at เป็นวันนี้)
     const incomingToday = products
       .filter((p) => {
         const createdDate = new Date(p.created_at).toISOString().split("T")[0];
@@ -219,7 +214,6 @@ export default function WarehousePage({ params }: WarehousePageProps) {
       })
       .reduce((sum, product) => sum + product.quantity, 0);
 
-    // แก้ไขส่วน TODO เดิม: คำนวณสินค้าออกจาก state ที่ดึงมาใหม่
     const outgoingTotal = outgoingMovements.reduce(
       (sum, item) => sum + item.quantity_moved,
       0
@@ -277,7 +271,7 @@ export default function WarehousePage({ params }: WarehousePageProps) {
           )}
         </div>
 
-        {/* Stats - แสดงข้อมูลการเข้า-ออกสินค้า */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="stats bg-base-100 shadow">
             <div className="stat">
