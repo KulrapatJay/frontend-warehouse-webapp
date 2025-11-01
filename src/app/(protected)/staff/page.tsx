@@ -87,7 +87,7 @@ const formatCreatorName = (creator: Product["creator"]) => {
 };
 
 // ========== Filter Function ==========
-export function filterProducts(
+function filterProducts(
   list: Product[],
   searchTerm: string,
   category: string,
