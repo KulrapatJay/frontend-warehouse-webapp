@@ -1,7 +1,11 @@
-import { NextConfig } from 'next';
+import { NextConfig } from "next";
 
-const nextConfig: NextConfig =  {
+const nextConfig: NextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["daisyui"],
+  experimental: {
+    optimizePackageImports: ["daisyui"],
+  },
   webpack(config, { isServer }) {
     if (!isServer) {
       config.resolve.fallback = {
