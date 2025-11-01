@@ -3,7 +3,7 @@
 import React from "react";
 import Sidebar from "@/components/common/Sidebar";
 import Navbar from "@/components/common/Navbar";
-import CustomToaster from "@/components/ui/Alert";
+import CustomToaster from "@/components/ui/alert";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export default function ProtectedLayout({
