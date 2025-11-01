@@ -48,6 +48,7 @@ export default function AddItemPage() {
   const [loading, setLoading] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false); // เพิ่ม state สำหรับ modal
   const [pendingData, setPendingData] = useState<TAddItemSchema | null>(null); // เพิ่ม state สำหรับเก็บข้อมูลที่รอบันทึก
+  const [isSaving, setIsSaving] = useState(false);
 
   const {
     register,
@@ -146,8 +147,11 @@ export default function AddItemPage() {
   };
 
   // --- Handle actual save (หลังจากยืนยันใน modal) ---
-  const handleConfirmSave = async () => {
-    if (!pendingData) return;
+const handleConfirmSave = async () => {
+    if (!pendingData || isSaving) return; // ป้องกันการกดซ้ำ
+
+    setIsSaving(true); // ล็อกปุ่ม
+    const toastId = toast.loading("กำลังบันทึกข้อมูล...");
 
     try {
       const payload = {
@@ -164,7 +168,7 @@ export default function AddItemPage() {
         },
       });
 
-      toast.success("เพิ่มรายการสินค้าสำเร็จ!");
+      toast.success("เพิ่มรายการสินค้าสำเร็จ!", { id: toastId });
       setShowConfirmModal(false);
       setPendingData(null);
       router.push("/staff");
@@ -175,15 +179,18 @@ export default function AddItemPage() {
       } else if (err instanceof Error) {
         errorMessage = err.message || errorMessage;
       }
-      toast.error(errorMessage);
+      toast.error(errorMessage, { id: toastId });
       console.error(err);
       setShowConfirmModal(false);
       setPendingData(null);
+    } finally {
+      setIsSaving(false); // ปลดล็อกปุ่ม
     }
   };
 
   // --- Handle cancel confirmation ---
   const handleCancelSave = () => {
+    if (isSaving) return; // ป้องกันการยกเลิกขณะกำลังบันทึก
     setShowConfirmModal(false);
     setPendingData(null);
   };
@@ -402,12 +409,12 @@ export default function AddItemPage() {
 
             <p className="text-center mb-6">ต้องการเพิ่มสินค้านี้หรือไม่?</p>
 
-            <div className="modal-action">
+<div className="modal-action">
               <button
                 type="button"
                 className="btn btn-ghost"
                 onClick={handleCancelSave}
-                disabled={isSubmitting}
+                disabled={isSaving}
               >
                 ยกเลิก
               </button>
@@ -415,9 +422,9 @@ export default function AddItemPage() {
                 type="button"
                 className="btn btn-primary"
                 onClick={handleConfirmSave}
-                disabled={isSubmitting}
+                disabled={isSaving}
               >
-                {isSubmitting ? (
+                {isSaving ? (
                   <span className="loading loading-spinner loading-sm" />
                 ) : (
                   "ยืนยัน"

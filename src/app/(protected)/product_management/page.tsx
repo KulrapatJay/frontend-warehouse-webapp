@@ -113,20 +113,33 @@ export default function ProductManagement() {
         const categoriesData: Category[] = await categoriesResponse.json();
 
         // แปลงข้อมูลจาก ApiProduct -> Product เพื่อให้ Component นำไปใช้แสดงผล
-        const transformedProducts: Product[] = productsData.map((p) => ({
-          id: String(p.id),
-          code: p.sku,
-          name: p.product_name,
-          category: p.category.category_name,
-          price: Number(p.price),
-          unit: p.unit.unit_name,
-          date: p.created_at,
-          imageUrl: p.image_url
-            ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${p.image_url}`
-            : null,
-          qty: p.quantity,
-          barcode: p.sku,
-        }));
+        const transformedProducts: Product[] = productsData.map((p) => {
+          // สร้าง URL รูปภาพที่ถูกต้องสำหรับ Supabase Storage
+          let imageUrl = null;
+          if (p.image_url) {
+            // ตรวจสอบว่าเป็น full URL อยู่แล้วหรือไม่
+            if (p.image_url.startsWith("http")) {
+              imageUrl = p.image_url;
+            } else {
+              // ถ้าเป็น path เฉพาะ ให้สร้าง URL ของ Supabase Storage
+              const cleanPath = p.image_url.replace(/^\//, "");
+              imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/products/${cleanPath}`;
+            }
+          }
+
+          return {
+            id: String(p.id),
+            code: p.sku,
+            name: p.product_name,
+            category: p.category.category_name,
+            price: Number(p.price),
+            unit: p.unit.unit_name,
+            date: p.created_at,
+            imageUrl,
+            qty: p.quantity,
+            barcode: p.sku,
+          };
+        });
 
         setProducts(transformedProducts);
         setUnits(unitsData);
