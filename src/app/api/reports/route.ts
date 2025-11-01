@@ -41,7 +41,7 @@ interface Cache<T> {
   timestamp: number;
 }
 // สร้างที่เก็บ Cache แบบง่ายๆ (ข้อมูลจะหายไปเมื่อเซิร์ฟเวอร์รีสตาร์ท)
-const cacheStore: { [key: string]: Cache<any> } = {};
+const cacheStore: { [key: string]: Cache<SalesOrder[]> } = {};
 // กำหนดอายุของ Cache เป็น 60 วินาที (1 นาที)
 const CACHE_TTL_SECONDS = 60;
 
