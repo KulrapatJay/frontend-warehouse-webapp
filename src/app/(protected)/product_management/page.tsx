@@ -58,7 +58,7 @@ const fPrice = (n: number) =>
     n
   );
 
-export function filterProducts(
+function filterProducts(
   list: Product[],
   search: string,
   category: string
