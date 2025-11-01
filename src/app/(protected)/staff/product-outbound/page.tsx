@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { FaBarcode, FaPlus, FaMinus, FaPrint } from "react-icons/fa";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { generateReceiptPDF, printPDF } from "@/lib/receipt-generator";
+import type { ReceiptData } from "@/lib/receipt-generator";
 
 // --- Type Definitions ---
 type Product = {
@@ -243,17 +245,41 @@ export default function ProductOutboundPage() {
 
       const orderId = response.data?.id || response.data?.data?.id;
 
+      // พิมพ์ใบเสร็จถ้าเลือก
       if (printReceipt && orderId) {
         try {
-          await axios.post("/api/print/initialize");
-          await axios.post(`/api/print/sales-order/${orderId}`);
-          toast.success("พิมพ์ใบเสร็จเรียบร้อยแล้ว!");
+          const printToastId = toast.loading("กำลังสร้างใบเสร็จ...");
+          
+          // ดึงข้อมูลใบเสร็จจาก API
+          const receiptResponse = await axios.get(`/api/print/sales-order/${orderId}`);
+          console.log("Receipt data:", receiptResponse.data);
+          
+          if (receiptResponse.data && receiptResponse.data.success && receiptResponse.data.data) {
+            const receiptData: ReceiptData = receiptResponse.data.data;
+            
+            // สร้าง PDF (ใช้ await เพราะเป็น async)
+            const pdf = await generateReceiptPDF(receiptData);
+            
+            // พิมพ์ (ใช้ await)
+            await printPDF(pdf);
+            
+            toast.dismiss(printToastId);
+            toast.success("กรุณาเลือกเครื่องพิมพ์จากหน้าต่างที่เปิดขึ้น");
+          } else {
+            toast.dismiss(printToastId);
+            const errorMessage = receiptResponse.data?.message || "ไม่พบข้อมูลใบเสร็จใน API response";
+            throw new Error(errorMessage);
+          }
+
         } catch (printError) {
           const message =
             axios.isAxiosError(printError)
-              ? printError.response?.data?.message || "ไม่สามารถพิมพ์ใบเสร็จได้"
-              : "ไม่สามารถพิมพ์ใบเสร็จได้";
-          toast.error(`บันทึกข้อมูลสำเร็จแต่${message}`);
+              ? printError.response?.data?.message || "ไม่สามารถสร้างใบเสร็จได้"
+              : printError instanceof Error 
+                ? printError.message 
+                : "ไม่สามารถสร้างใบเสร็จได้";
+          toast.error(`${message}`);
+          console.error("Print error:", printError);
         }
       } else if (printReceipt && !orderId) {
         toast.error("ไม่สามารถพิมพ์ได้เนื่องจากไม่พบ Order ID");

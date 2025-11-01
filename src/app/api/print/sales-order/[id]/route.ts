@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function POST(
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -16,10 +16,9 @@ export async function POST(
     const backendApiUrl = `${process.env.BACKEND_API_URL}/api/print/sales-order/${id}`;
 
     const apiResponse = await fetch(backendApiUrl, {
-      method: 'POST',
+      method: 'GET',
       headers: {
         Cookie: `token=${token}`,
-        'Content-Type': 'application/json',
       },
     });
 
@@ -30,7 +29,7 @@ export async function POST(
 
     const data = await apiResponse.json();
     if (!apiResponse.ok) {
-      return NextResponse.json({ message: data?.message || 'Failed to print sales order' }, { status: apiResponse.status });
+      return NextResponse.json({ message: data?.message || 'Failed to fetch receipt data' }, { status: apiResponse.status });
     }
 
     return NextResponse.json(data, { status: 200 });
