@@ -154,7 +154,8 @@ const getRoleName = (user: User | null): string | undefined => {
   return typeof user.role === "string" ? user.role : user.role.role_name;
 };
 
-export function filterOrders(
+// ลบ export ออก - เปลี่ยนเป็นฟังก์ชันภายในไฟล์
+function filterOrders(
   list: Order[],
   searchTerm: string,
   status: string
