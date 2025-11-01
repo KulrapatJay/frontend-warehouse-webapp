@@ -104,10 +104,14 @@ export default function EditProductClient({ id }: { id: string }) {
           imageFile: undefined,
         });
 
-        // พรีวิวรูปจาก backend
         if (data.image_url) {
-          const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
-          setPreview(`${base}${data.image_url}`);
+          if (data.image_url.startsWith('http')) {
+            setPreview(data.image_url);
+          } else {
+            const cleanPath = data.image_url.replace(/^\//, '');
+            const supabaseUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/products/${cleanPath}`;
+            setPreview(supabaseUrl);
+          }
         } else {
           setPreview(null);
         }
